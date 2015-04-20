@@ -2,9 +2,9 @@ import numpy as np
 import math
 from matplotlib import pyplot as plt
 
-import sys
-sys.path.append(r'/Users/christa/Dropbox/SDI/Christa/topology_paper/python')
-sys.path.append('C:\Users\F75VD\Dropbox\SDI\Christa\Topology_paper\python')
+#import sys
+#sys.path.append(r'/Users/christa/Dropbox/SDI/Christa/topology_paper/python')
+#sys.path.append('C:\Users\F75VD\Dropbox\SDI\Christa\Topology_paper\python')
 
 import my_graph as mg
 import my_graph_helpers as mgh
@@ -48,11 +48,11 @@ if __name__ == "__main__":
     if True:
         place = 'epworth'
         if place == 'epworth':
-            filename = "epworth_block_complicated"
+            filename = "data/epworth_demo"
             rezero = np.array([305680, 8022350])
             define_barriers = define_epworth_barriers
-        if place == 'capetown':
-            filename = "capetown5"
+        if place == 'data/capetown':
+            filename = "capetown"
             rezero = np.array([-31900, -3766370])
             define_barriers = define_capetown_barriers
 

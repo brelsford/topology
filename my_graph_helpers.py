@@ -115,7 +115,7 @@ def segment_distance_sq(e1, e2):
 #                       e.nodes[1].x*e.nodes[0].y for e in face.edges))
 
 
-#def centroid(face):
+# def centroid(face):
 #    """finds the centroid of a myface """
 #
 #    a = 0.5*(sum(e.nodes[0].x*e.nodes[1].y - e.nodes[1].x*e.nodes[0].y
@@ -269,12 +269,12 @@ def _fake_edge(myA, centroid, mynode):
     newedge.length = 0
     myA.add_edge(newedge)
 
+
 def __add_fake_edges(myA, p, roads_only=False):
     if roads_only:
-        [_fake_edge(myA,p.centroid,n) for n in p.nodes if n.road]
+        [_fake_edge(myA, p.centroid, n) for n in p.nodes if n.road]
     else:
-        [_fake_edge(myA,p.centroid,n) for n in p.nodes]
-
+        [_fake_edge(myA, p.centroid, n) for n in p.nodes]
 
 
 def shortest_path_setup(myA, p, roads_only=False):
@@ -678,7 +678,8 @@ def graphFromShapes(shapes, name, rezero=np.array([0, 0])):
 
 
 def build_barriers(myG, edgelist):
-    # assert isinstance(edgelist[0], mg.MyEdge), "{} is not and edge".format(edgelist[0])
+    # assert isinstance(edgelist[0], mg.MyEdge), "{} is not and edge".
+    # format(edgelist[0])
     for e in edgelist:
         if e in myG.myedges():
             myG.remove_road_segment(e)
@@ -687,6 +688,7 @@ def build_barriers(myG, edgelist):
 ####################
 # PLOTTING FUNCTIONS
 ####################
+
 
 def plot_cluster_mat(clustering_data, plotting_data, title, dmax,
                      plot_dendro=True):
@@ -758,7 +760,6 @@ def make_colormap(seq):
             cdict['blue'].append([item, b1, b2])
     return mcolors.LinearSegmentedColormap('CustomMap', cdict)
 
-
 ######################
 #  IMPORT & Running FUNCTIONS #
 #####################
@@ -766,10 +767,10 @@ def make_colormap(seq):
 def import_and_setup(component, filename, threshold=1,
                      rezero=np.array([0, 0]), connected=True):
     plt.close('all')
-    
-    # check that rezero is an array of len(2)    
+
+    # check that rezero is an array of len(2)
     # check that threshold is a float
-    
+
     sf = shapefile.Reader(filename)
     myG = graphFromShapes(sf.shapes(), "Before", rezero)
 

@@ -131,7 +131,6 @@ class MyFace(object):
 
         return MyNode((cx, cy))
 
-
     def __len__(self):
         return len(self.edges)
 
@@ -786,7 +785,7 @@ class MyGraph(object):
 
         if barriers:
             barrier_edges = [e for e in self.myedges() if e.barrier]
-            if len(barrier_edges)>0:
+            if len(barrier_edges) > 0:
                 barGraph = mgh.graphFromMyEdges(barrier_edges)
                 barGraph.plot(node_size=25, node_color='green', width=4,
                               edge_color='green')
@@ -809,6 +808,10 @@ class MyGraph(object):
             myGpaths = MyGraph(Gpaths)
             self.plot_roads(update=update)
             myGpaths.plot(edge_color='purple', width=6, node_size=1)
+            
+            
+    def plot_weak_duals(self, stack):
+        """Given a list of weak dual graphs, Plot them   """
 
 
 if __name__ == "__main__":
@@ -837,7 +840,7 @@ if __name__ == "__main__":
     S0.plot_roads(copy, update=False, new_plot=True)
 
     new_roads_i = mgh.build_all_roads(S0, alpha=2, wholepath=True,
-                                     plot_intermediate=False)
+                                      plot_intermediate=False)
 
     S0.plot_roads(copy, update=False, new_plot=True)
     # plt.title("Barrier Edges")
