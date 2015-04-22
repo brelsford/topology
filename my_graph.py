@@ -2,6 +2,7 @@ import numpy as np
 import networkx as nx
 import itertools
 import math
+import warnings
 from matplotlib import pyplot as plt
 import my_graph_helpers as mgh
 from lazy_property import lazy_property
@@ -102,20 +103,22 @@ class MyFace(object):
 
         if isMyEdge:
             self.edges = set(list_of_edges)
+            self.ordered_edges = list_of_edges
         else:
             self.edges = set(MyEdge(e) for e in list_of_edges)
+            self.ordered_edges = [MyEdge(e) for e in list_of_edges]
 
     @lazy_property
     def area(self):
         return 0.5*abs(sum(e.nodes[0].x*e.nodes[1].y -
-                       e.nodes[1].x*e.nodes[0].y for e in self.edges))
+                       e.nodes[1].x*e.nodes[0].y for e in self.ordered_edges))
 
     @lazy_property
     def centroid(self):
         """finds the centroid of a myface """
 
         a = 0.5*(sum(e.nodes[0].x*e.nodes[1].y - e.nodes[1].x*e.nodes[0].y
-                 for e in self.edges))
+                 for e in self.ordered_edges))
         if abs(a) < 0.01:
             cx = np.mean([n.x for n in self.nodes])
             cy = np.mean([n.y for n in self.nodes])
@@ -123,11 +126,11 @@ class MyFace(object):
             cx = (1/(6*a))*sum([(e.nodes[0].x + e.nodes[1].x) *
                                (e.nodes[0].x*e.nodes[1].y -
                                e.nodes[1].x*e.nodes[0].y)
-                               for e in self.edges])
+                               for e in self.ordered_edges])
             cy = (1/(6*a))*sum([(e.nodes[0].y + e.nodes[1].y) *
                                (e.nodes[0].x*e.nodes[1].y -
                                e.nodes[1].x*e.nodes[0].y)
-                               for e in self.edges])
+                               for e in self.ordered_edges])
 
         return MyNode((cx, cy))
 
@@ -162,6 +165,7 @@ class MyGraph(object):
         self.name = name
         self.cleaned = False
         self.roads_update = True
+        self.copy_count = 0
 
         if G is None:
             self.G = nx.Graph()
@@ -186,7 +190,7 @@ class MyGraph(object):
         return {n: n.loc for n in self.G.nodes_iter()}
 
     def connected_components(self):
-        return [MyGraph(g, self.name+" pt %d" % i) for i, g
+        return [MyGraph(g, self.name) for i, g
                 in enumerate(nx.connected_component_subgraphs(self.G))]
 
     def myedges(self):
@@ -199,7 +203,8 @@ class MyGraph(object):
     def copy(self):
         nx_copy = self.G.copy()
         copy = MyGraph(nx_copy)
-        copy.name = "copy_"+self.name
+        copy.name = self.name
+        copy.copy_count = self.copy_count + 1
         try:
             copy.inner_facelist = self.inner_facelist
             copy.outerface = self.outerface
@@ -414,6 +419,8 @@ class MyGraph(object):
             iface = MyFace(face)
             iface.edges = [self.G[e[1]][e[0]]["myedge"] for e in face]
             self.inner_facelist.append(iface)
+
+        return facelist
 
     def weak_dual(self):
         """This function will create a networkx graph of the weak dual
@@ -791,7 +798,6 @@ class MyGraph(object):
                               edge_color='green')
 
     def plot_all_paths(self, all_paths, update=False):
-
         """ plots the shortest paths from all interior parcels to the road.
         Optional to update road geometery based on changes in network geometry.
         """
@@ -808,10 +814,50 @@ class MyGraph(object):
             myGpaths = MyGraph(Gpaths)
             self.plot_roads(update=update)
             myGpaths.plot(edge_color='purple', width=6, node_size=1)
-            
-            
-    def plot_weak_duals(self, stack):
-        """Given a list of weak dual graphs, Plot them   """
+
+    def plot_weak_duals(self, stack=None, colors=None, width=None,
+                        node_size=None):
+        """Given a list of weak dual graphs, plots them all. Has default colors
+        node size, and line widths, but these can be added as lists."""
+
+        if stack is None:
+            duals = self.stacked_duals()
+        else:
+            duals = stack
+
+        if colors is None:
+            colors = ['grey', 'black', 'blue', 'purple', 'red', 'orange',
+                      'yellow']
+        else:
+            colors = colors
+
+        if width is None:
+            width = [0.5, 0.75, 1, 1.75, 2.25, 3]
+        else:
+            width = width
+
+        if node_size is None:
+            node_size = [2, 6, 9, 12, 17, 25]
+        else:
+            node_size = node_size
+
+        if len(duals) > len(colors):
+            warnings.warn("too many dual graphs to draw. simplify fig," +
+                          " or add more colors")
+
+        fig = plt.figure()
+
+        for i in range(0, len(duals)):
+            for j in duals[i]:
+                j.define_roads()
+                j.define_interior_parcels()
+                j.plot(node_size=node_size[i], node_color=colors[i],
+                       edge_color=colors[i], width=width[i])
+                # print "color = {0}, node_size = {1}, width = {2}".format(
+                #       colors[i], node_size[i], width[i])
+
+        plt.axes().set_aspect(aspect=1)
+        plt.axis('off')
 
 
 if __name__ == "__main__":

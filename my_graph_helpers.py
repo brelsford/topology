@@ -115,26 +115,26 @@ def segment_distance_sq(e1, e2):
 #                       e.nodes[1].x*e.nodes[0].y for e in face.edges))
 
 
-# def centroid(face):
-#    """finds the centroid of a myface """
-#
-#    a = 0.5*(sum(e.nodes[0].x*e.nodes[1].y - e.nodes[1].x*e.nodes[0].y
-#             for e in face.edges))
-#    if abs(a) < 0.01:
-#        cx = np.mean([n.x for n in face.nodes])
-#        cy = np.mean([n.y for n in face.nodes])
-#    else:
-#        cx = (1/(6*a))*sum([(e.nodes[0].x + e.nodes[1].x) *
-#                           (e.nodes[0].x*e.nodes[1].y -
-#                           e.nodes[1].x*e.nodes[0].y)
-#                           for e in face.edges])
-#        cy = (1/(6*a))*sum([(e.nodes[0].y + e.nodes[1].y) *
-#                           (e.nodes[0].x*e.nodes[1].y -
-#                           e.nodes[1].x*e.nodes[0].y)
-#                           for e in face.edges])
-#
-#    centroid = mg.MyNode((cx, cy))
-#    return centroid
+def centroid(face):
+    """finds the centroid of a myface """
+
+    a = 0.5*(sum(e.nodes[0].x*e.nodes[1].y - e.nodes[1].x*e.nodes[0].y
+             for e in face.edges))
+    if abs(a) < 0.01:
+        cx = np.mean([n.x for n in face.nodes])
+        cy = np.mean([n.y for n in face.nodes])
+    else:
+        cx = (1/(6*a))*sum([(e.nodes[0].x + e.nodes[1].x) *
+                           (e.nodes[0].x*e.nodes[1].y -
+                           e.nodes[1].x*e.nodes[0].y)
+                           for e in face.edges])
+        cy = (1/(6*a))*sum([(e.nodes[0].y + e.nodes[1].y) *
+                           (e.nodes[0].x*e.nodes[1].y -
+                           e.nodes[1].x*e.nodes[0].y)
+                           for e in face.edges])
+
+    centroid = mg.MyNode((cx, cy))
+    return centroid
 
 
 # vector math
@@ -764,15 +764,16 @@ def make_colormap(seq):
 #  IMPORT & Running FUNCTIONS #
 #####################
 
+
 def import_and_setup(component, filename, threshold=1,
-                     rezero=np.array([0, 0]), connected=True):
+                     rezero=np.array([0, 0]), connected=True, name=""):
     plt.close('all')
 
     # check that rezero is an array of len(2)
     # check that threshold is a float
 
     sf = shapefile.Reader(filename)
-    myG = graphFromShapes(sf.shapes(), "Before", rezero)
+    myG = graphFromShapes(sf.shapes(), name, rezero)
 
     myG = myG.clean_up_geometry(threshold, connected)
 
@@ -1028,3 +1029,6 @@ if __name__ == "__main__":
     S0.plot_roads(master, update=False)
     barGraph.plot(node_size=25, node_color='green', width=3,
                   edge_color='green')
+                  
+    S1 = S0.weak_dual()
+    S1.plot()
