@@ -11,6 +11,26 @@ from scipy.cluster.hierarchy import linkage, dendrogram
 import my_graph as mg
 
 
+""" This file includes a bunch of helper functions for my_graph.py.  
+There are a bunch of basic spatial geometery functions, some greedy search
+probablilty functions, 
+
+ways to set up and determine the shortest paths from parcel to a road
+
+the code that exists on optimization problem 2: thinking about how to build in
+additional connectivity beyond just minimum access, as well as plotting the
+associated matrices
+
+code for creating a mygraph object from a shapefile or a list of myfaces
+(used for weak dual calculations)
+
+a couple of test graphs- testGraph, (more or less lollipopo shaped) and
+testGraphLattice which is a lattice. 
+
+   """
+
+
+
 #############################
 # BASIC MATH AND GEOMETRY FUNCTIONS
 #############################
@@ -107,34 +127,6 @@ def segment_distance_sq(e1, e2):
         sq_distance = min(d1, d2, d3, d4)
 
     return sq_distance
-
-
-# def area(face):
-#    """finds the area of a myface"""
-#    return 0.5*abs(sum(e.nodes[0].x*e.nodes[1].y -
-#                       e.nodes[1].x*e.nodes[0].y for e in face.edges))
-
-
-def centroid(face):
-    """finds the centroid of a myface """
-
-    a = 0.5*(sum(e.nodes[0].x*e.nodes[1].y - e.nodes[1].x*e.nodes[0].y
-             for e in face.edges))
-    if abs(a) < 0.01:
-        cx = np.mean([n.x for n in face.nodes])
-        cy = np.mean([n.y for n in face.nodes])
-    else:
-        cx = (1/(6*a))*sum([(e.nodes[0].x + e.nodes[1].x) *
-                           (e.nodes[0].x*e.nodes[1].y -
-                           e.nodes[1].x*e.nodes[0].y)
-                           for e in face.edges])
-        cy = (1/(6*a))*sum([(e.nodes[0].y + e.nodes[1].y) *
-                           (e.nodes[0].x*e.nodes[1].y -
-                           e.nodes[1].x*e.nodes[0].y)
-                           for e in face.edges])
-
-    centroid = mg.MyNode((cx, cy))
-    return centroid
 
 
 # vector math
@@ -495,7 +487,7 @@ def build_all_roads(myG, master=None, alpha=2, plot_intermediate=False,
 
 ############################
 # connectivity optimization
-##############################
+############################
 
 def __road_connections_through_culdesac(myG, threshold=5):
     """connects all nodes on a road that are within threshold = 5 meters of
@@ -594,22 +586,6 @@ def difference_roads_to_fences(myG, travelcost=False):
     meantravel = sum([sum(i) for i in path_len])/(n*(n-1))
 
     return diff, fullpath_len, path_len, meantravel
-# ==============================================================================
-#
-# def __temp_select_roads(myG, diff, parcelmax, maxdiff):
-#     p1index = parcelmax.index(maxdiff)
-#     p2index = diff[p1index].index(maxdiff)
-#
-#     p1 = myG.inner_facelist[p1index]
-#     p2 = myG.inner_facelist[p2index]
-#
-#     path, length = shortest_path_p2p(myG, p1, p2)
-#     # print path
-#     edge = myG.G[path[0]][path[1]]["myedge"]
-#
-#        return edge
-# ==============================================================================
-
 
 def bisecting_path_endpoints(myG):
     roads_only = myG.copy()
@@ -664,7 +640,8 @@ def graphFromShapes(shapes, name, rezero=np.array([0, 0])):
                 nodedict[myN] = myN
             else:
                 nodes.append(nodedict[myN])
-            plist.append(mg.MyParcel(nodes))
+            edges = [(nodes[i], nodes[i+1]) for i in range(0, len(nodes)-1)]
+            plist.append(mg.MyFace(edges))
 
     myG = mg.MyGraph(name=name)
 
@@ -786,14 +763,11 @@ def import_and_setup(component, filename, threshold=1,
 ###################
 
 
-def road_length(myG):
-    edges = myG.myedges()
-    eroad = [e for e in edges if e.road]
-    lengths = [e.length for e in eroad]
-    return sum(lengths)
+
 
 
 def test_edges_equality():
+    """checks that myGraph points to myEdges correctly   """
     testG = testGraph()
     testG.trace_faces()
     outerE = list(testG.outerface.edges)[0]
@@ -801,6 +775,7 @@ def test_edges_equality():
 
 
 def test_weak_duals():
+    """ plots the weak duals based on testGraph"""
     S0 = testGraph()
     S1 = S0.weak_dual()
     S2 = S1.weak_dual()
@@ -818,6 +793,7 @@ def test_weak_duals():
 
 
 def test_nodes(n1, n2):
+    """ returns true if two nodes are evaluated as the same"""
     eq_num = len(set(n1).intersection(set(n2)))
     is_num = len(set([id(n) for n in n1])
                  .intersection(set([id(n) for n in n2])))
@@ -1029,6 +1005,6 @@ if __name__ == "__main__":
     S0.plot_roads(master, update=False)
     barGraph.plot(node_size=25, node_color='green', width=3,
                   edge_color='green')
-                  
+
     S1 = S0.weak_dual()
     S1.plot()

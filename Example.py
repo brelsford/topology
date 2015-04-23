@@ -4,9 +4,22 @@ from matplotlib import pyplot as plt
 
 import my_graph_helpers as mgh
 
+"""This example file demonstrates how to import a shapefile, and
+the two main mathematical results: 1) finding and plotting the shortest
+distance of roads necessary to acheive universal road access for all parcels,
+and 2) finding plotting the nested weak duals.
+
+The shortest distance of roads algorithm is based on probablistic greedy search
+so different runs will give slightly different answers.
+
+The weak duals code is deterministic.
+
+ """
+
 
 def define_capetown_barriers(myG):
-    """ based on rezero vector crezero = np.array([-31900, -3766370]) """
+    """ these barriers are based on rezero vector
+    np.array([-31900, -3766370]) """
     be = [e for e in myG.myedges() if e.nodes[0].x < 146 and
           e.nodes[0].x > 25]
     be2 = [e for e in be if e.nodes[1].x < 146 and e.nodes[1].x > 25]
@@ -25,7 +38,7 @@ def define_capetown_barriers(myG):
 
 
 def define_epworth_barriers(myG):
-    """ erezero = np.array([305680, 8022350])  """
+    """these barriers are based on rezero vector np.array([305680, 8022350])"""
     be = [e for e in myG.myedges() if e.nodes[0].x > 187 and
           e.nodes[1].x > 187]
 
@@ -64,6 +77,10 @@ if __name__ == "__main__":
     # original roads
     myG.plot_roads(master=original)
 
+###################
+# New Roads
+##################
+
     # finds roads to connect all interior parcels
     new_roads = mgh.build_all_roads(myG)
 
@@ -74,10 +91,13 @@ if __name__ == "__main__":
     # green: barriers
 
 ###############
-# Dual graphs: pretty not important for stamen
+# Dual graphs: pretty, but not important for stamen
 ###############
 
+    # find all levels of nested weak duals
     stack = myG.stacked_duals()
+
+    # plotting preferences, could just use defaults.
     colors = ['grey', 'purple', 'blue', 'red', 'orange', 'yellow']
     width = [1, 1, 2, 4, 6]
     node_size = [2, 10, 25, 35, 45]

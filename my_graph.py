@@ -8,15 +8,74 @@ import my_graph_helpers as mgh
 from lazy_property import lazy_property
 
 
+"""
+This my_graph.py file includes three classes:  MyNode, MyEdge, MyFace,
+and MyGraph.
+
+
+MyNode
+
+MyNode is a class that represents nodes. Floating point geometric inputs are
+rounded to two decimal places*.  MyNodes are hashable.
+
+*In practice, if the map's base unit is decimal degrees, the two decimal place
+rounding would be about 1.1 km at the equator, which could be problematic.
+reprojecting the map to meters or km would solve this problem, or changing
+significant_fig to 5 would solve this.
+
+
+MyEdge
+
+MyEdge keeps track of pairs of nodes as an edge in a graph.  Edges are
+undirected. The geometric length is calculated if called. Also has T/F
+properties for being a road or barrier. Hashable.
+
+
+MyFace
+
+A myface is essentially a simple polygon, that makes up part of a planar graph.
+Has area, a centroid, and a list of nodes and edges.  Not hashable.
+
+MyGraph
+
+MyGraph is the bulk of the work here.  It's a wrapper around networkx graphs,
+to be explicitly spatial.  Nodes must by MyNodes, and so located in space,
+and edges must by MyEdges.
+
+All networkx functions are availble through myG.G
+
+In addition, explicitly spatial functions for myG are:
+1) cleaning up bad geometery
+2) find dual graphs
+3) define roads (connected component bounding edges) and interior parcels,
+as well as properties to define what nodes and edges are on roads.
+
+Finally, the last code section can "break" the geomotery of the graph to build
+in roads, rather than just defining roads as a property of some edges.  I don't
+use this module, but it might be useful someday.
+
+Several plotting and example functions are also included:
+
+myG.plot()  takes normal networkx.draw() keywords
+
+myG.plot_roads specficially plots roads, interior parcels, and barriers.
+
+myG.plot__weak_duals plots the nexted dual graphs.
+
+"""
+
+
 class MyNode(object):
     """ rounds float nodes to (2!) decimal places, defines equality """
+
     def __init__(self, locarray, name=None):
+        significant_figs = 2
         if len(locarray) != 2:
             print "error"
-        x = locarray[0]  # - 1605000
-        y = locarray[1]  # - 6429200
-        self.x = np.round(float(x), 2)
-        self.y = np.round(float(y), 2)
+        x = locarray[0]
+        y = locarray[1]
+        self.x = np.round(float(x), significant_figs)
+        self.y = np.round(float(y), significant_figs)
         self.loc = (self.x, self.y)
         self.road = False
         self.on_interior = False
@@ -26,7 +85,7 @@ class MyNode(object):
         if self.name:
             return self.name
         else:
-            return "(%.2f,%.2f)" % (self.x, self.y)  # + str(id(self))
+            return "(%.2f,%.2f)" % (self.x, self.y)
 
     def __eq__(self, other):
         return self.loc == other.loc
@@ -115,7 +174,10 @@ class MyFace(object):
 
     @lazy_property
     def centroid(self):
-        """finds the centroid of a myface """
+        """finds the centroid of a MyFace, based on the shoelace method
+        e.g. http://en.wikipedia.org/wiki/Shoelace_formula and
+        http://en.wikipedia.org/wiki/Centroid#Centroid_of_polygon
+        The method relies on properly ordered edges. """
 
         a = 0.5*(sum(e.nodes[0].x*e.nodes[1].y - e.nodes[1].x*e.nodes[0].y
                  for e in self.ordered_edges))
@@ -140,13 +202,6 @@ class MyFace(object):
     def __repr__(self):
         return "Face with centroid at (%.2f,%.2f)" % (self.centroid.x,
                                                       self.centroid.y)
-
-
-class MyParcel(MyFace):
-    def __init__(self, nodes, parcel_name="P0"):
-        self.parcel_name = parcel_name
-        edges = [(nodes[i], nodes[i+1]) for i in range(0, len(nodes)-1)]
-        MyFace.__init__(self, edges)
 
 
 class MyGraph(object):
@@ -583,6 +638,12 @@ class MyGraph(object):
 
         self.define_interior_parcels()
         return
+
+    def road_length(self):
+        """finds total length of roads in self """
+        eroad = [e for e in self.myedges() if e.road]
+        length = sum([e.length for e in eroad])
+        return length
 
 
 #############################################
