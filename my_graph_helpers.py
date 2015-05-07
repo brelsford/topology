@@ -11,9 +11,11 @@ from scipy.cluster.hierarchy import linkage, dendrogram
 import my_graph as mg
 
 
-""" This file includes a bunch of helper functions for my_graph.py.  
-There are a bunch of basic spatial geometery functions, some greedy search
-probablilty functions, 
+""" This file includes a bunch of helper functions for my_graph.py.
+
+There are a bunch of basic spatial geometery functions,
+
+some greedy search probablilty functions,
 
 ways to set up and determine the shortest paths from parcel to a road
 
@@ -25,11 +27,9 @@ code for creating a mygraph object from a shapefile or a list of myfaces
 (used for weak dual calculations)
 
 a couple of test graphs- testGraph, (more or less lollipopo shaped) and
-testGraphLattice which is a lattice. 
+testGraphLattice which is a lattice.
 
    """
-
-
 
 #############################
 # BASIC MATH AND GEOMETRY FUNCTIONS
@@ -587,6 +587,7 @@ def difference_roads_to_fences(myG, travelcost=False):
 
     return diff, fullpath_len, path_len, meantravel
 
+
 def bisecting_path_endpoints(myG):
     roads_only = myG.copy()
     etup_drop = roads_only.find_interior_edges()
@@ -761,9 +762,6 @@ def import_and_setup(component, filename, threshold=1,
 ####################
 # Testing functions
 ###################
-
-
-
 
 
 def test_edges_equality():
