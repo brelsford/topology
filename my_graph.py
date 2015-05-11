@@ -797,7 +797,7 @@ class MyGraph(object):
 
     def plot_roads(self, master=None, update=False, parcel_labels=False,
                    title="", new_plot=True, new_road_color="blue",
-                   new_road_width=6, old_node_size=30, old_road_width=8,
+                   new_road_width=4, old_node_size=25, old_road_width=6,
                    barriers=True):
         if new_plot:
             plt.figure()
@@ -936,9 +936,10 @@ if __name__ == "__main__":
                if e.nodes[0].y == 0 and e.nodes[1].y == 0]
     # barrieredges = [e for e in edgesub if e.nodes[1].y == 0]
 
-    for e in edgesub:
-        S0.remove_road_segment(e)
-        e.barrier = True
+    if False:
+        for e in edgesub:
+            S0.remove_road_segment(e)
+            e.barrier = True
 
     S0.define_interior_parcels()
 
@@ -947,7 +948,7 @@ if __name__ == "__main__":
     S0.plot_roads(copy, update=False, new_plot=True)
 
     new_roads_i = mgh.build_all_roads(S0, alpha=2, wholepath=True,
-                                      plot_intermediate=False)
+                                      plot_intermediate=False, barriers=False)
 
     S0.plot_roads(copy, update=False, new_plot=True)
     # plt.title("Barrier Edges")

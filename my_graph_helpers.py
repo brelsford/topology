@@ -240,7 +240,7 @@ def segment_near_path(myG, segment, path, threshold):
     of all the segments contained in path is stored as a list of nodes that
     strung together make up a path.
     """
-    assert isinstance(segment, mg.MyEdge)
+    # assert isinstance(segment, mg.MyEdge)
 
     pathlist = []
 
@@ -308,7 +308,10 @@ def find_short_paths(myA, parcel, barriers=True):
 
     if barriers:
         barrier_edges = [e for e in myA.myedges() if e.barrier]
-        myA.remove_myedges_from(barrier_edges)
+        if len(barrier_edges)>0:
+            myA.remove_myedges_from(barrier_edges)
+        else:
+            print "no barriers found. Did you expect them?"
         # myA.plot_roads(title = "myA no barriers")
 
     interior, road = shortest_path_setup(myA, parcel)
@@ -334,7 +337,7 @@ def find_short_paths(myA, parcel, barriers=True):
 
 
 def find_short_paths_all_parcels(myA, new_road1=None, new_road2=None,
-                                 barriers=True):
+                                 barriers=True, quiet=False):
     """ finds the short paths for all parcels, stored in parcel.paths"""
     all_paths = {}
     counter = 0
@@ -370,7 +373,8 @@ def find_short_paths_all_parcels(myA, new_road1=None, new_road2=None,
             paths = find_short_paths(myA, parcel, barriers=barriers)
             counter += 1
             all_paths.update(paths)
-    print "Shortest paths found for {} parcels".format(counter)
+    if quiet is False:
+        print "Shortest paths found for {} parcels".format(counter)
     return all_paths
 
 
@@ -425,29 +429,34 @@ def choose_path_probablistic(myG, paths, alpha):
 
 def build_all_roads(myG, master=None, alpha=2, plot_intermediate=False,
                     wholepath=False, original_roads=None, plot_original=False,
-                    bisect=False, plot_result=False, barriers=True):
+                    bisect=False, plot_result=False, barriers=True,
+                    quiet = False, vquiet = False):
 
     """builds roads using the probablistic greedy alg, until all
     interior parcels are connected, and returns the total length of
     road built. """
+
+    if vquiet is True:
+        quiet = True
 
     if plot_original:
         myG.plot_roads(original_roads, update=False,
                        parcel_labels=False, new_road_color="blue")
 
     added_road_length = 0
-
+    plotnum = 0
     if plot_intermediate is True and master is None:
         master = myG.copy()
 
     myG.define_interior_parcels()
     nr1 = None
     nr2 = None
-    print "{} Interior Parcels".format(len(myG.interior_parcels))
+    if vquiet is False:
+        print "Begin with {} Interior Parcels".format(len(myG.interior_parcels))
     while myG.interior_parcels:
         # find all potential segments
         all_paths = find_short_paths_all_parcels(myG, nr1, nr2,
-                                                 barriers)
+                                                 barriers,quiet=quiet)
 
         # choose and build one
         nr1, nr2, new_path = choose_path_probablistic(myG, all_paths,
@@ -464,8 +473,11 @@ def build_all_roads(myG, master=None, alpha=2, plot_intermediate=False,
         myG.define_interior_parcels()
         if plot_intermediate:
             myG.plot_roads(master, update=False)
+            plt.savefig("Intermediate_Step"+str(plotnum)+".pdf", format='pdf')
+            plotnum += 1
 
-        print "{} interior parcels left".format(len(myG.interior_parcels))
+        if quiet is False:
+            print "{} interior parcels left".format(len(myG.interior_parcels))
         # update the properties of nodes & edges to reflect new geometry.
 
     # once done getting all interior parcels connected, have option to bisect
@@ -744,7 +756,7 @@ def make_colormap(seq):
 
 
 def import_and_setup(component, filename, threshold=1,
-                     rezero=np.array([0, 0]), connected=True, name=""):
+                     rezero=np.array([0, 0]), connected=False, name=""):
     plt.close('all')
 
     # check that rezero is an array of len(2)
@@ -755,9 +767,11 @@ def import_and_setup(component, filename, threshold=1,
 
     myG = myG.clean_up_geometry(threshold, connected)
 
-    connected = myG.connected_components()
+    if connected is True:
+        return myG
+    else:
+        return myG.connected_components()[component]
 
-    return connected[component]
 
 ####################
 # Testing functions
@@ -846,27 +860,27 @@ def testGraphLattice():
     n[2] = mg.MyNode((0, 10))
     n[3] = mg.MyNode((0, 20))
     n[4] = mg.MyNode((0, 30))
-#    n[5] = mg.MyNode((0, 40))
+    n[5] = mg.MyNode((0, 40))
     n[6] = mg.MyNode((10, 0))
     n[7] = mg.MyNode((10, 10))
     n[8] = mg.MyNode((10, 20))
     n[9] = mg.MyNode((10, 30))
-#    n[10] = mg.MyNode((10, 40))
+    n[10] = mg.MyNode((10, 40))
     n[11] = mg.MyNode((20, 0))
     n[12] = mg.MyNode((20, 10))
     n[13] = mg.MyNode((20, 20))
     n[14] = mg.MyNode((20, 30))
-#    n[15] = mg.MyNode((20, 40))
+    n[15] = mg.MyNode((20, 40))
     n[16] = mg.MyNode((30, 0))
     n[17] = mg.MyNode((30, 10))
     n[18] = mg.MyNode((30, 20))
     n[19] = mg.MyNode((30, 30))
-#    n[20] = mg.MyNode((30, 40))
-#    n[21] = mg.MyNode((40, 0))
-#    n[22] = mg.MyNode((40, 10))
-#    n[23] = mg.MyNode((40, 20))
-#    n[24] = mg.MyNode((40, 30))
-#    n[25] = mg.MyNode((40, 40))
+    n[20] = mg.MyNode((30, 40))
+    n[21] = mg.MyNode((40, 0))
+    n[22] = mg.MyNode((40, 10))
+    n[23] = mg.MyNode((40, 20))
+    n[24] = mg.MyNode((40, 30))
+    n[25] = mg.MyNode((40, 40))
 
     lat = mg.MyGraph(name="S0")
     lat.add_edge(mg.MyEdge((n[1], n[2])))
@@ -875,41 +889,41 @@ def testGraphLattice():
     lat.add_edge(mg.MyEdge((n[2], n[7])))
     lat.add_edge(mg.MyEdge((n[3], n[4])))
     lat.add_edge(mg.MyEdge((n[3], n[8])))
-#    lat.add_edge(mg.MyEdge((n[4], n[5])))
+    lat.add_edge(mg.MyEdge((n[4], n[5])))
     lat.add_edge(mg.MyEdge((n[4], n[9])))
-#    lat.add_edge(mg.MyEdge((n[5], n[10])))
+    lat.add_edge(mg.MyEdge((n[5], n[10])))
     lat.add_edge(mg.MyEdge((n[6], n[7])))
     lat.add_edge(mg.MyEdge((n[6], n[11])))
     lat.add_edge(mg.MyEdge((n[7], n[8])))
     lat.add_edge(mg.MyEdge((n[7], n[12])))
     lat.add_edge(mg.MyEdge((n[8], n[9])))
     lat.add_edge(mg.MyEdge((n[8], n[13])))
-#    lat.add_edge(mg.MyEdge((n[9], n[10])))
+    lat.add_edge(mg.MyEdge((n[9], n[10])))
     lat.add_edge(mg.MyEdge((n[9], n[14])))
-#    lat.add_edge(mg.MyEdge((n[10], n[15])))
+    lat.add_edge(mg.MyEdge((n[10], n[15])))
     lat.add_edge(mg.MyEdge((n[11], n[12])))
     lat.add_edge(mg.MyEdge((n[11], n[16])))
     lat.add_edge(mg.MyEdge((n[12], n[13])))
     lat.add_edge(mg.MyEdge((n[12], n[17])))
     lat.add_edge(mg.MyEdge((n[13], n[14])))
     lat.add_edge(mg.MyEdge((n[13], n[18])))
-#    lat.add_edge(mg.MyEdge((n[14], n[15])))
+    lat.add_edge(mg.MyEdge((n[14], n[15])))
     lat.add_edge(mg.MyEdge((n[14], n[19])))
-#    lat.add_edge(mg.MyEdge((n[15], n[20])))
-#    lat.add_edge(mg.MyEdge((n[15], n[20])))
+    lat.add_edge(mg.MyEdge((n[15], n[20])))
+    lat.add_edge(mg.MyEdge((n[15], n[20])))
     lat.add_edge(mg.MyEdge((n[16], n[17])))
-#    lat.add_edge(mg.MyEdge((n[16], n[21])))
+    lat.add_edge(mg.MyEdge((n[16], n[21])))
     lat.add_edge(mg.MyEdge((n[17], n[18])))
-#    lat.add_edge(mg.MyEdge((n[17], n[22])))
+    lat.add_edge(mg.MyEdge((n[17], n[22])))
     lat.add_edge(mg.MyEdge((n[18], n[19])))
-#    lat.add_edge(mg.MyEdge((n[18], n[23])))
-#    lat.add_edge(mg.MyEdge((n[19], n[20])))
-#    lat.add_edge(mg.MyEdge((n[19], n[24])))
-#    lat.add_edge(mg.MyEdge((n[20], n[25])))
-#    lat.add_edge(mg.MyEdge((n[21], n[22])))
-#    lat.add_edge(mg.MyEdge((n[22], n[23])))
-#    lat.add_edge(mg.MyEdge((n[23], n[24])))
-#    lat.add_edge(mg.MyEdge((n[24], n[25])))
+    lat.add_edge(mg.MyEdge((n[18], n[23])))
+    lat.add_edge(mg.MyEdge((n[19], n[20])))
+    lat.add_edge(mg.MyEdge((n[19], n[24])))
+    lat.add_edge(mg.MyEdge((n[20], n[25])))
+    lat.add_edge(mg.MyEdge((n[21], n[22])))
+    lat.add_edge(mg.MyEdge((n[22], n[23])))
+    lat.add_edge(mg.MyEdge((n[23], n[24])))
+    lat.add_edge(mg.MyEdge((n[24], n[25])))
 
     return lat, n
 
@@ -991,18 +1005,18 @@ if __name__ == "__main__":
     S0, n = testGraphLattice()
     S0.define_roads()
     S0.define_interior_parcels()
-    S0, barrier_edges = build_lattice_barrier(S0)
+    #S0, barrier_edges = build_lattice_barrier(S0)
     barGraph = graphFromMyEdges(barrier_edges)
     master = S0.copy()
 
     # S0.plot_roads(master, update=False, new_plot=True)
 
     new_roads_i = build_all_roads(S0, S0, alpha=2, wholepath=True,
-                                  barriers=True)
+                                  barriers=False)
 
     S0.plot_roads(master, update=False)
-    barGraph.plot(node_size=25, node_color='green', width=3,
-                  edge_color='green')
+    # barGraph.plot(node_size=25, node_color='green', width=3,
+    #              edge_color='green')
 
     S1 = S0.weak_dual()
     S1.plot()
