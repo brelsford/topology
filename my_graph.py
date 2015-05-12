@@ -105,8 +105,7 @@ class MyEdge(object):
 
     def __init__(self, nodes):
         self.nodes = tuple(nodes)
-        self.parcel1 = None
-        self.parcel2 = None
+        self.interior = False
         self.road = False
         self.barrier = False
 
@@ -590,10 +589,20 @@ class MyGraph(object):
                 for n in f.nodes:
                     n.on_interior = True
                     interior_nodes.append(n)
+                # rewrites all edge properties as not being interior.This needs
+                # to happen BEFORE we define the edge properties for parcels
+                # that are interior, in order to give that priority.
+                for e in f.edges:
+                    e.interior = False
             else:
                 f.on_road = True
                 for n in f.nodes:
                     n.on_interior = False
+
+        for p in interior_parcels:
+            for e in p.edges:
+                e.interior=True
+
         self.interior_parcels = interior_parcels
         self.interior_nodes = interior_nodes
         # print "define interior parcels called"
@@ -801,6 +810,7 @@ class MyGraph(object):
                    barriers=True):
         if new_plot:
             plt.figure()
+
         plt.axes().set_aspect(aspect=1)
         plt.axis('off')
         plt.title(title)
