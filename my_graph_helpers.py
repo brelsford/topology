@@ -7,6 +7,8 @@ import itertools
 import operator
 import matplotlib.colors as mcolors
 from scipy.cluster.hierarchy import linkage, dendrogram
+import plotly.plotly as py
+from plotly.graph_objs import *
 
 import my_graph as mg
 
@@ -308,7 +310,7 @@ def find_short_paths(myA, parcel, barriers=True):
 
     if barriers:
         barrier_edges = [e for e in myA.myedges() if e.barrier]
-        if len(barrier_edges)>0:
+        if len(barrier_edges) > 0:
             myA.remove_myedges_from(barrier_edges)
         else:
             print "no barriers found. Did you expect them?"
@@ -430,7 +432,7 @@ def choose_path_probablistic(myG, paths, alpha):
 def build_all_roads(myG, master=None, alpha=2, plot_intermediate=False,
                     wholepath=False, original_roads=None, plot_original=False,
                     bisect=False, plot_result=False, barriers=True,
-                    quiet = False, vquiet = False):
+                    quiet=False, vquiet=False):
 
     """builds roads using the probablistic greedy alg, until all
     interior parcels are connected, and returns the total length of
@@ -452,11 +454,11 @@ def build_all_roads(myG, master=None, alpha=2, plot_intermediate=False,
     nr1 = None
     nr2 = None
     if vquiet is False:
-        print "Begin with {} Interior Parcels".format(len(myG.interior_parcels))
+        print "Begin w {} Interior Parcels".format(len(myG.interior_parcels))
     while myG.interior_parcels:
         # find all potential segments
         all_paths = find_short_paths_all_parcels(myG, nr1, nr2,
-                                                 barriers,quiet=quiet)
+                                                 barriers, quiet=quiet)
 
         # choose and build one
         nr1, nr2, new_path = choose_path_probablistic(myG, all_paths,
@@ -476,8 +478,13 @@ def build_all_roads(myG, master=None, alpha=2, plot_intermediate=False,
             plt.savefig("Intermediate_Step"+str(plotnum)+".pdf", format='pdf')
             plotnum += 1
 
+        remain = len(myG.interior_parcels)
         if quiet is False:
-            print "{} interior parcels left".format(len(myG.interior_parcels))
+            print "{} interior parcels left".format(remain)
+        if vquiet is False:
+            if remain > 300 or remain in [50, 100, 150, 200, 225, 250, 275]:
+                print "{} interior parcels".format(remain)
+
         # update the properties of nodes & edges to reflect new geometry.
 
     # once done getting all interior parcels connected, have option to bisect
@@ -750,6 +757,20 @@ def make_colormap(seq):
             cdict['blue'].append([item, b1, b2])
     return mcolors.LinearSegmentedColormap('CustomMap', cdict)
 
+
+def plotly_notebook(traces, filename=None, title=None):
+    if filename is None:
+        filename = "plotly_graph"
+    fig = Figure(data=Data(traces),
+                 layout=Layout(title=title, plot_bgcolor="rgb(217, 217, 217)",
+                               showlegend=True,
+                               xaxis=XAxis(showgrid=False, zeroline=False,
+                                           showticklabels=False),
+                               yaxis=YAxis(showgrid=False, zeroline=False,
+                                           showticklabels=False)))
+    py.iplot(fig, filename=filename)
+
+
 ######################
 #  IMPORT & Running FUNCTIONS #
 #####################
@@ -1005,7 +1026,7 @@ if __name__ == "__main__":
     S0, n = testGraphLattice()
     S0.define_roads()
     S0.define_interior_parcels()
-    #S0, barrier_edges = build_lattice_barrier(S0)
+    # S0, barrier_edges = build_lattice_barrier(S0)
     barGraph = graphFromMyEdges(barrier_edges)
     master = S0.copy()
 

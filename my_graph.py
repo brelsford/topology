@@ -7,6 +7,9 @@ from matplotlib import pyplot as plt
 import my_graph_helpers as mgh
 from lazy_property import lazy_property
 
+import plotly.plotly as py
+from plotly.graph_objs import *
+
 
 """
 This my_graph.py file includes three classes:  MyNode, MyEdge, MyFace,
@@ -601,7 +604,7 @@ class MyGraph(object):
 
         for p in interior_parcels:
             for e in p.edges:
-                e.interior=True
+                e.interior = True
 
         self.interior_parcels = interior_parcels
         self.interior_nodes = interior_nodes
@@ -807,7 +810,7 @@ class MyGraph(object):
     def plot_roads(self, master=None, update=False, parcel_labels=False,
                    title="", new_plot=True, new_road_color="blue",
                    new_road_width=4, old_node_size=25, old_road_width=6,
-                   barriers=True):
+                   barriers=True, base_width=1):
         if new_plot:
             plt.figure()
 
@@ -822,7 +825,7 @@ class MyGraph(object):
 
         edge_colors = [new_road_color if e.road else 'black'
                        for e in self.myedges()]
-        edge_width = [new_road_width if e.road else 1 for e in self.myedges()]
+        edge_width = [new_road_width if e.road else base_width for e in self.myedges()]
         # node_colors=['black' if n.road else 'black' for n in self.G.nodes()]
         node_colors = 'black'
         # node_sizes = [30 if n.road else 1 for n in self.G.nodes()]
@@ -838,7 +841,7 @@ class MyGraph(object):
 
         nx.draw_networkx_edges(interior_graph.G, pos=nlocs, with_labels=False,
                                edge_color='red', node_color='red',
-                               node_size=50, width=4)
+                               node_size=50, width=new_road_width)
 
         if parcel_labels is True:
             for i in range(0, len(self.inner_facelist)):
@@ -929,6 +932,41 @@ class MyGraph(object):
 
         plt.axes().set_aspect(aspect=1)
         plt.axis('off')
+
+    def myGraph_to_plotly_traces(self):
+        """myGraph to plotly trace   """
+
+        # add the edges as disconnected lines in a trace
+        edge_trace = Scatter(x=[], y=[], mode='lines',
+                             name='Parcel Boundaries',
+                             line=Line(color='grey', width=0.5))
+        road_trace = Scatter(x=[], y=[], mode='lines',
+                             name='Road Boundaries',
+                             line=Line(color='black', width=2))
+        interior_trace = Scatter(x=[], y=[], mode='lines',
+                                 name='Interior Parcels',
+                                 line=Line(color='red', width=2.5))
+        barrier_trace = Scatter(x=[], y=[], mode='lines',
+                                name='Barriers',
+                                line=Line(color='green', width=0.75))
+
+        for i in self.connected_components():
+            for edge in i.myedges():
+                x0, y0 = edge.nodes[0].loc
+                x1, y1 = edge.nodes[1].loc
+                edge_trace['x'] += [x0, x1, None]
+                edge_trace['y'] += [y0, y1, None]
+                if edge.road:
+                    road_trace['x'] += [x0, x1, None]
+                    road_trace['y'] += [y0, y1, None]
+                if edge.interior:
+                    interior_trace['x'] += [x0, x1, None]
+                    interior_trace['y'] += [y0, y1, None]
+                if edge.barrier:
+                    barrier_trace['x'] += [x0, x1, None]
+                    barrier_trace['y'] += [y0, y1, None]
+
+        return edge_trace, road_trace, interior_trace, barrier_trace
 
 
 if __name__ == "__main__":
