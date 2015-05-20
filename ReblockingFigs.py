@@ -69,7 +69,7 @@ def nice_histogram_many(d):
 
 if __name__ == "__main__":
 
-    if False:
+    if True:
         filename = "data/capetown"
         place = "cape"
         crezero = np.array([-31900, -3766370])
@@ -87,19 +87,19 @@ if __name__ == "__main__":
     #                old_road_width=2, base_width=0.5)
     # plt.savefig("Figs/cape_block.pdf", format='pdf',)
 
-    alpha = [4, 16, 2]
+    alpha = [16, 2]
     d = defaultdict(list)
 
     for a in alpha:
         r = 0
         print "alpha = {}".format(a)
-        for r in range(0, 10):
+        for r in range(0, 4):
             nr = new_length(block, a, r, plot=True)
             d[a].append(nr)
             print "r={}, alpha={}".format(r, a)
 
             r =+ 1
-            pickle.dump(d, open("d_results2.p", "wb"))
+            pickle.dump(d, open("d_results3.p", "wb"))
             plt.close('all')
 
     nice_histogram_many(d)
