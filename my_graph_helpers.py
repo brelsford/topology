@@ -1,5 +1,7 @@
 import numpy as np
 import shapefile
+import math
+from collections import defaultdict
 from matplotlib import pyplot as plt
 import networkx as nx
 import random
@@ -202,6 +204,36 @@ def myRoll(mylist):
     mylist.insert(0, mylist[-1])
     del mylist[-1]
     return(mylist)
+
+######################
+# DUALS HElPER
+#######################
+
+
+def form_equivalence_classes(myG, duals=None, verbose=True):
+
+    if not duals:
+        duals = myG.stacked_duals()
+
+    depth = 1
+    result = {}
+
+    myG.S1_nodes()
+    result[depth] = [f for f in myG.inner_facelist if f.odd_node[depth]]
+
+    if verbose:
+        print "Graph S{} has {} parcels".format(depth, len(result[depth]))
+
+    depth += 1
+
+    while depth < len(duals):
+        duals, depth, result = myG.formClass(duals, depth, result)
+        if verbose:
+            md = max(result.keys())
+            print "Graph S{} has {} parcels".format(md, len(result[md]))
+            print "current depth {} just finished".format(depth)
+
+    return result, depth
 
 ######################
 # DEALING WITH PATHS
@@ -875,78 +907,35 @@ def testGraph():
     return lat
 
 
-def testGraphLattice():
-    n = {}
-    n[1] = mg.MyNode((0, 0))
-    n[2] = mg.MyNode((0, 10))
-    n[3] = mg.MyNode((0, 20))
-    n[4] = mg.MyNode((0, 30))
-    n[5] = mg.MyNode((0, 40))
-    n[6] = mg.MyNode((10, 0))
-    n[7] = mg.MyNode((10, 10))
-    n[8] = mg.MyNode((10, 20))
-    n[9] = mg.MyNode((10, 30))
-    n[10] = mg.MyNode((10, 40))
-    n[11] = mg.MyNode((20, 0))
-    n[12] = mg.MyNode((20, 10))
-    n[13] = mg.MyNode((20, 20))
-    n[14] = mg.MyNode((20, 30))
-    n[15] = mg.MyNode((20, 40))
-    n[16] = mg.MyNode((30, 0))
-    n[17] = mg.MyNode((30, 10))
-    n[18] = mg.MyNode((30, 20))
-    n[19] = mg.MyNode((30, 30))
-    n[20] = mg.MyNode((30, 40))
-    n[21] = mg.MyNode((40, 0))
-    n[22] = mg.MyNode((40, 10))
-    n[23] = mg.MyNode((40, 20))
-    n[24] = mg.MyNode((40, 30))
-    n[25] = mg.MyNode((40, 40))
+def testGraphLattice(n, xshift = 0 , yshift = 0 ):
+    """returns a square lattice of dimension nxn   """
+    nodelist = {}
+    for j in range(0, n**2):
+        x = math.fmod(j, n) + xshift
+        y = math.floor((j/n)) + yshift
+        nodelist[j] = mg.MyNode((x, y))
 
-    lat = mg.MyGraph(name="S0")
-    lat.add_edge(mg.MyEdge((n[1], n[2])))
-    lat.add_edge(mg.MyEdge((n[1], n[6])))
-    lat.add_edge(mg.MyEdge((n[2], n[3])))
-    lat.add_edge(mg.MyEdge((n[2], n[7])))
-    lat.add_edge(mg.MyEdge((n[3], n[4])))
-    lat.add_edge(mg.MyEdge((n[3], n[8])))
-    lat.add_edge(mg.MyEdge((n[4], n[5])))
-    lat.add_edge(mg.MyEdge((n[4], n[9])))
-    lat.add_edge(mg.MyEdge((n[5], n[10])))
-    lat.add_edge(mg.MyEdge((n[6], n[7])))
-    lat.add_edge(mg.MyEdge((n[6], n[11])))
-    lat.add_edge(mg.MyEdge((n[7], n[8])))
-    lat.add_edge(mg.MyEdge((n[7], n[12])))
-    lat.add_edge(mg.MyEdge((n[8], n[9])))
-    lat.add_edge(mg.MyEdge((n[8], n[13])))
-    lat.add_edge(mg.MyEdge((n[9], n[10])))
-    lat.add_edge(mg.MyEdge((n[9], n[14])))
-    lat.add_edge(mg.MyEdge((n[10], n[15])))
-    lat.add_edge(mg.MyEdge((n[11], n[12])))
-    lat.add_edge(mg.MyEdge((n[11], n[16])))
-    lat.add_edge(mg.MyEdge((n[12], n[13])))
-    lat.add_edge(mg.MyEdge((n[12], n[17])))
-    lat.add_edge(mg.MyEdge((n[13], n[14])))
-    lat.add_edge(mg.MyEdge((n[13], n[18])))
-    lat.add_edge(mg.MyEdge((n[14], n[15])))
-    lat.add_edge(mg.MyEdge((n[14], n[19])))
-    lat.add_edge(mg.MyEdge((n[15], n[20])))
-    lat.add_edge(mg.MyEdge((n[15], n[20])))
-    lat.add_edge(mg.MyEdge((n[16], n[17])))
-    lat.add_edge(mg.MyEdge((n[16], n[21])))
-    lat.add_edge(mg.MyEdge((n[17], n[18])))
-    lat.add_edge(mg.MyEdge((n[17], n[22])))
-    lat.add_edge(mg.MyEdge((n[18], n[19])))
-    lat.add_edge(mg.MyEdge((n[18], n[23])))
-    lat.add_edge(mg.MyEdge((n[19], n[20])))
-    lat.add_edge(mg.MyEdge((n[19], n[24])))
-    lat.add_edge(mg.MyEdge((n[20], n[25])))
-    lat.add_edge(mg.MyEdge((n[21], n[22])))
-    lat.add_edge(mg.MyEdge((n[22], n[23])))
-    lat.add_edge(mg.MyEdge((n[23], n[24])))
-    lat.add_edge(mg.MyEdge((n[24], n[25])))
+    edgelist = defaultdict(list)
 
-    return lat, n
+    for i in nodelist.keys():
+        ni = nodelist[i]
+        for j in nodelist.keys():
+            nj = nodelist[j]
+            if ni != nj:
+                if distance(ni, nj) == 1:
+                    edgelist[ni].append(nj)
+
+    myedgelist = []
+
+    for n1 in edgelist.keys():
+        n2s = edgelist[n1]
+        for n2 in n2s:
+            myedgelist.append(mg.MyEdge((n1, n2)))
+
+    lattice = graphFromMyEdges(myedgelist)
+    lattice.name = "lattice"
+
+    return lattice
 
 
 def testGraphEquality():
@@ -965,6 +954,9 @@ def testGraphEquality():
     G.add_edge(mg.MyEdge((n[2], n[3])))
     G.add_edge(mg.MyEdge((n[3], n[4])))
     G.add_edge(mg.MyEdge((n[4], n[5])))
+    G.add_edge(mg.MyEdge((n[5], n[6])))
+    G.add_edge(mg.MyEdge((n[6], n[7])))
+    G.add_edge(mg.MyEdge((n[7], n[8])))
 
     return G, n
 

@@ -158,6 +158,8 @@ class MyFace(object):
         self.name = ".".join(alpha_nodes)
         self.paths = None
         self.on_road = False
+        self.even_nodes = {}
+        self.odd_node = {}
 
         # the position of the face is the centroid of the nodes that
         # compose the face
@@ -429,6 +431,7 @@ class MyGraph(object):
     def trace_faces(self):
         """Algorithm from SAGE"""
         if len(self.G.nodes()) < 2:
+            self.inner_facelist = []
             return []
 
         # grab the embedding
@@ -476,6 +479,7 @@ class MyGraph(object):
             iface = MyFace(face)
             iface.edges = [self.G[e[1]][e[0]]["myedge"] for e in face]
             self.inner_facelist.append(iface)
+            iface.down1_node = iface.centroid
 
         return facelist
 
@@ -524,7 +528,8 @@ class MyGraph(object):
         # if the faces share an edge
         dual = MyGraph(name=dual_name)
         if len(self.inner_facelist) == 1:
-            dual.add_node(self.inner_facelist[0].centroid)
+            face = self.inner_facelist[0]
+            dual.add_node(face.centroid)
         else:
             combos = list(itertools.combinations(self.inner_facelist, 2))
             for c in combos:
@@ -532,7 +537,75 @@ class MyGraph(object):
                     dual.add_edge(MyEdge((c[0].centroid, c[1].centroid)))
         return dual
 
-    def stacked_duals(self):
+    def S1_nodes(self):
+        """Gets the odd_node dict started for depth 1 (all parcels have a
+        centroid) """
+        for f in self.inner_facelist:
+            f.odd_node[1] = f.centroid
+
+    def formClass(self, duals, depth, result):
+
+        """ function finds the groups of parcels that are represented in the
+        dual graph with depth "depth+1".  The depth value provided must be even
+        and less than the max depth of duals for the graph.
+
+        need to figure out why I can return a result with depth d+1 with an
+        empty list.
+
+        """
+
+        dm1 = depth - 1
+
+        is_odd = bool(depth % 2)
+
+        try:
+            assert not is_odd
+        except AssertionError:
+            raise RuntimeError("depth ({}) should be even".format(depth))
+
+        # flist is the list of parcels in self which are represented in the
+        # dual of depth depth-1 (dm1)
+        flist = [f for f in self.inner_facelist
+                 if (dm1 in f.odd_node and f.odd_node[dm1])]
+
+        dual1 = duals[dm1]
+        dual2 = duals[depth]
+
+        # flat list of faces in duals 1 and 2 for potentially many disconnected
+        # dual graphs.
+        dual1_faces = [f for G in dual1 for f in G.inner_facelist]
+        dual2_faces = [f for G in dual2 for f in G.inner_facelist]
+
+        # creates an association between the faces in self and the centroids
+        # of faces in dual1, for faces in dual1 that overlap a face (face0) in
+        # self.
+        for face0 in flist:
+            down2_nodes = []
+            for face1 in dual1_faces:
+                if face0.odd_node[depth-1] in face1.nodes:
+                    down2_nodes.append(face1.centroid)
+                    face0.even_nodes[depth] = set(down2_nodes)
+
+        # if the down2 faces for face0 make up a face in the dual2 graph, then
+        # the centroid of that face in the dual2 graph represents face0 in the
+        # dual graph with depth depth+1
+        for face0 in flist:
+            if depth in face0.even_nodes:
+                for face2 in dual2_faces:
+                    if set(face0.even_nodes[depth]) == set(face2.nodes):
+                        face0.odd_node[depth+1] = face2.centroid
+
+        # return the results as a dict for depth depth+1, also stored as a
+        # a property of each face.
+        result[depth+1] = [f for f in self.inner_facelist
+                           if depth+1 in f.odd_node and f.odd_node[depth+1]]
+
+        depth = depth + 2
+        return duals, depth, result
+
+    def stacked_duals(self, maxdepth=15):
+        """to protect myself from an infinite loop, max depth defaults to 15"""
+
         def level_up(Slist):
             Sns = [g.weak_dual().connected_components() for g in Slist]
             Sn = [cc for duals in Sns for cc in duals]
@@ -540,11 +613,19 @@ class MyGraph(object):
 
         stacks = []
         stacks.append([self])
-        while len(stacks) < 10:
+        while len(stacks) < maxdepth:
             slist = level_up(stacks[-1])
             if len(slist) == 0:
                 break
             stacks.append(slist)
+
+        for G in stacks:
+            for g in G:
+                try:
+                    g.inner_facelist
+                except AttributeError:
+                    g.trace_faces()
+
         return stacks
 
 
@@ -825,7 +906,8 @@ class MyGraph(object):
 
         edge_colors = [new_road_color if e.road else 'black'
                        for e in self.myedges()]
-        edge_width = [new_road_width if e.road else base_width for e in self.myedges()]
+        edge_width = [new_road_width if e.road else base_width
+                      for e in self.myedges()]
         # node_colors=['black' if n.road else 'black' for n in self.G.nodes()]
         node_colors = 'black'
         # node_sizes = [30 if n.road else 1 for n in self.G.nodes()]
@@ -906,12 +988,12 @@ class MyGraph(object):
             colors = colors
 
         if width is None:
-            width = [0.5, 0.75, 1, 1.75, 2.25, 3]
+            width = [0.5, 0.75, 1, 1.75, 2.25, 3, 3.5]
         else:
             width = width
 
         if node_size is None:
-            node_size = [2, 6, 9, 12, 17, 25]
+            node_size = [0.5, 6, 9, 12, 17, 25, 30]
         else:
             node_size = node_size
 
@@ -919,12 +1001,10 @@ class MyGraph(object):
             warnings.warn("too many dual graphs to draw. simplify fig," +
                           " or add more colors")
 
-        fig = plt.figure()
+        plt.figure()
 
         for i in range(0, len(duals)):
             for j in duals[i]:
-                j.define_roads()
-                j.define_interior_parcels()
                 j.plot(node_size=node_size[i], node_color=colors[i],
                        edge_color=colors[i], width=width[i])
                 # print "color = {0}, node_size = {1}, width = {2}".format(
