@@ -210,7 +210,14 @@ def myRoll(mylist):
 #######################
 
 
-def form_equivalence_classes(myG, duals=None, verbose=True):
+def form_equivalence_classes(myG, duals=None, verbose=False):
+
+    try:
+        for f in myG.inner_facelist:
+            f.even_nodes = {}
+            f.odd_node = {}
+    except:
+        pass
 
     if not duals:
         duals = myG.stacked_duals()
@@ -226,18 +233,32 @@ def form_equivalence_classes(myG, duals=None, verbose=True):
 
     depth += 1
 
+    if verbose:
+        test_interior_is_inner(myG)
+
     while depth < len(duals):
         duals, depth, result = myG.formClass(duals, depth, result)
         if verbose:
             md = max(result.keys())
             print "Graph S{} has {} parcels".format(md, len(result[md]))
             print "current depth {} just finished".format(depth)
+            # test_interior_is_inner(myG)
 
     return result, depth
 
 ######################
 # DEALING WITH PATHS
 #######################
+
+
+def ptup_to_mypath(myG, ptup):
+    mypath = []
+
+    for i in range(1, len(ptup)):
+        pedge = myG.G[ptup[i-1]][ptup[i]]['myedge']
+        mypath.append(pedge)
+
+    return mypath
 
 
 def path_length(path):
@@ -260,27 +281,19 @@ def shorten_path(ptup):
     first node is on a road.  This gets rid of paths that travel along a
     curb before ending."""
 
-#    roadtrue = [p.road for p in ptup]
-#    if roadtrue[0] == roadtrue[-1]:
-#        raise Exception("segment does not start off road and end on road
-#        \n {} \n {}".format(ptup, roadtrue))
-    while ptup[1].road is True:
+    while ptup[1].road is True and len(ptup) > 2:
         ptup.pop(0)
     return ptup
 
 
-def segment_near_path(myG, segment, path, threshold):
+def segment_near_path(myG, segment, pathlist, threshold):
     """returns True if the segment is within (geometric) distance threshold
     of all the segments contained in path is stored as a list of nodes that
     strung together make up a path.
     """
     # assert isinstance(segment, mg.MyEdge)
 
-    pathlist = []
-
-    for i in range(1, len(path)):
-        pedge = myG.G[path[i-1]][path[i]]['myedge']
-        pathlist.append(pedge)
+    # pathlist = ptup_to_mypath(path)
 
     for p in pathlist:
         sq_distance = segment_distance_sq(p, segment)
@@ -336,9 +349,13 @@ def shortest_path_p2p(myA, p1, p2):
     return path[1:-1], length
 
 
-def find_short_paths(myA, parcel, barriers=True):
+def find_short_paths(myA, parcel, barriers=True, shortest_only=False):
     """ finds short paths from an interior parcel,
     returns them and stores in parcel.paths  """
+
+    rb = [n for n in parcel.nodes+parcel.edges if n.road]
+    if len(rb) > 0:
+        raise AssertionError("parcel {} is on a road".format(parcel))
 
     if barriers:
         barrier_edges = [e for e in myA.myedges() if e.barrier]
@@ -350,14 +367,17 @@ def find_short_paths(myA, parcel, barriers=True):
 
     interior, road = shortest_path_setup(myA, parcel)
 
-    shortest_path = nx.shortest_path(myA.G, interior, road, "weight")
-    shortest_path_segments = len(shortest_path)
-    shortest_path_distance = path_length(shortest_path[1:-1])
-    all_simple = [shorten_path(p[1:-1]) for p in
-                  nx.all_simple_paths(myA.G, road, interior,
-                                      cutoff=shortest_path_segments + 2)]
-    paths = {tuple(p): path_length(p) for p in all_simple
-             if path_length(p) < shortest_path_distance*2}
+    shortest_path = nx.shortest_path(myA.G, road, interior, "weight")
+    if shortest_only is False:
+        shortest_path_segments = len(shortest_path)
+        shortest_path_distance = path_length(shortest_path[1:-1])
+        all_simple = [shorten_path(p[1:-1]) for p in nx.all_simple_paths(myA.G,
+                      road, interior, cutoff=shortest_path_segments + 2)]
+        paths = {tuple(p): path_length(p) for p in all_simple
+                 if path_length(p) < shortest_path_distance*2}
+    if shortest_only is True:
+        p = shorten_path(shortest_path[1:-1])
+        paths = {tuple(p): path_length(p)}
 
     myA.G.remove_node(road)
     myA.G.remove_node(interior)
@@ -370,33 +390,48 @@ def find_short_paths(myA, parcel, barriers=True):
     return paths
 
 
-def find_short_paths_all_parcels(myA, new_road1=None, new_road2=None,
-                                 barriers=True, quiet=False):
-    """ finds the short paths for all parcels, stored in parcel.paths"""
+def find_short_paths_all_parcels(myA, flist=None, full_path=None,
+                                 barriers=True, quiet=False,
+                                 shortest_only=False):
+    """ finds the short paths for all parcels, stored in parcel.paths
+    default assumes we are calculating from the outside in.  If we submit an
+    flist, find the parcels only for those faces, and (for now) recaluclate
+    paths for all of those faces.
+    """
     all_paths = {}
     counter = 0
 
-    for parcel in myA.interior_parcels:
+    if flist is None:
+        flist = myA.interior_parcels
+
+    for parcel in flist:
         # if paths have already been defined for this parcel
-        # (new_road should exist too)
+        # (full path should exist too)
         if parcel.paths:
+
+            if full_path is None:
+                raise AssertionError("comparison path is None "
+                                     "but parcel has paths")
+
+            rb = [n for n in parcel.nodes+parcel.edges if n.road]
+            if len(rb) > 0:
+                raise AssertionError("parcel {} is on a road".format(parcel))
+
             needs_update = False
             for pathitem in parcel.paths.items():
                     path = pathitem[0]
+                    mypath = ptup_to_mypath(myA, path)
                     path_length = pathitem[1]
-                    if new_road1 is not None:
-                        if segment_near_path(myA, new_road1,
-                                             path, path_length):
+                    for e in full_path:
+                        if segment_near_path(myA, e, mypath, path_length):
                             needs_update = True
+                            # this code would be faster if I could break to
+                            # next parcel if update turned true.
                             break
-                    if new_road2 is not None:
-                        if segment_near_path(myA, new_road2,
-                                             path, path_length):
-                            needs_update = True
-                            break
+
             if needs_update is True:
-                paths = find_short_paths(myA, parcel,
-                                         barriers=barriers)
+                paths = find_short_paths(myA, parcel, barriers=barriers,
+                                         shortest_only=shortest_only)
                 counter += 1
                 all_paths.update(paths)
             elif needs_update is False:
@@ -404,7 +439,8 @@ def find_short_paths_all_parcels(myA, new_road1=None, new_road2=None,
                 all_paths.update(paths)
         # if paths have not been defined for this parcel
         else:
-            paths = find_short_paths(myA, parcel, barriers=barriers)
+            paths = find_short_paths(myA, parcel, barriers=barriers,
+                                     shortest_only=shortest_only)
             counter += 1
             all_paths.update(paths)
     if quiet is False:
@@ -419,52 +455,50 @@ def build_path(myG, start, finish):
     ptup.reverse()
     ptup = shorten_path(ptup)
 
-    myedges = [myG.G[ptup[i-1]][ptup[i]]["myedge"]
-               for i in range(1, len(ptup))]
+    mypath = ptup_to_mypath(myG, ptup)
 
-    for e in myedges:
+    for e in mypath:
         myG.add_road_segment(e)
 
-    return ptup, myedges
+    return ptup, mypath
 
 #############################################
 #  PATH SELECTION AND CONSTRUCTION
 #############################################
 
 
-def choose_path_greedy(myG):
-
-    """ chooses the path segment, currently based on a strictly
-    greedy algorithm  """
-
-    start_parcel = min(myG.path_len_dict, key=myG.path_len_dict.get)
-    shortest_path = myG.paths_dict[start_parcel]
-    new_road = myG.G[shortest_path[0]][shortest_path[1]]["myedge"]
-
-    myG.new_road = new_road
-
-    return myG.new_road
-
-
-def choose_path_probablistic(myG, paths, alpha):
+def choose_path(myG, paths, alpha, strict_greedy=False):
 
     """ chooses the path segment, choosing paths of shorter
     length more frequently  """
 
-    inv_weight = {k: 1.0/(paths[k]**alpha) for k in paths}
-    target_path = WeightedPick(inv_weight)
-    new_road = myG.G[target_path[0]][target_path[1]]["myedge"]
+    if strict_greedy is False:
+        inv_weight = {k: 1.0/(paths[k]**alpha) for k in paths}
+        target_path = WeightedPick(inv_weight)
+    if strict_greedy is True:
+        target_path = min(paths, key=paths.get)
 
-    myG.new_road1 = new_road
-    myG.new_road2 = myG.G[target_path[-2]][target_path[-1]]["myedge"]
+    mypath = ptup_to_mypath(myG, target_path)
 
-    return myG.new_road1, myG.new_road2, target_path
+    return target_path, mypath
+
+#        if outsidein:
+#            result, depth = form_equivalence_classes(myG)
+#            while len(flist) < 1:
+#                md = max(result.keys())
+#                flist = flist + result.pop(md)
+#        elif outsidein == False:
+#            flist = myG.interior_parcels
+#            ## alternate option:
+#            # result, depth = form_equivalence_classes(myG)
+#            # flist = result[3]
 
 
 def build_all_roads(myG, master=None, alpha=2, plot_intermediate=False,
                     wholepath=False, original_roads=None, plot_original=False,
                     bisect=False, plot_result=False, barriers=True,
-                    quiet=False, vquiet=False):
+                    quiet=False, vquiet=False, strict_greedy=False,
+                    outsidein=False):
 
     """builds roads using the probablistic greedy alg, until all
     interior parcels are connected, and returns the total length of
@@ -477,63 +511,98 @@ def build_all_roads(myG, master=None, alpha=2, plot_intermediate=False,
         myG.plot_roads(original_roads, update=False,
                        parcel_labels=False, new_road_color="blue")
 
+    shortest_only = False
+    if strict_greedy is True:
+        shortest_only = True
+
     added_road_length = 0
-    plotnum = 0
+    # plotnum = 0
     if plot_intermediate is True and master is None:
         master = myG.copy()
 
     myG.define_interior_parcels()
-    nr1 = None
-    nr2 = None
+    target_mypath = None
     if vquiet is False:
         print "Begin w {} Interior Parcels".format(len(myG.interior_parcels))
+
+    md = 100
+
     while myG.interior_parcels:
-        # find all potential segments
-        all_paths = find_short_paths_all_parcels(myG, nr1, nr2,
-                                                 barriers, quiet=quiet)
+
+        result, depth = form_equivalence_classes(myG)
+
+        # flist from result!
+        flist = []
+
+        if md == 3:
+            flist = myG.interior_parcels
+        elif md > 3:
+            if outsidein is False:
+                result, depth = form_equivalence_classes(myG)
+                while len(flist) < 1:
+                    md = max(result.keys())
+                    flist = flist + result.pop(md)
+            elif outsidein is True:
+                result, depth = form_equivalence_classes(myG)
+                md = max(result.keys())
+                if len(result[md]) == 0:
+                    md = md - 2
+                flist = list(set(result[3]) - set(result.get(5, [])))
+
+        if quiet is False:
+            print ("Cur max depth is {}, {}".format(md, len(flist)) +
+                   " parcels at current depth. " +
+                   " {0:.1f} new roads so far".format(added_road_length))
+
+        # potential segments from parcels in flist
+
+        all_paths = find_short_paths_all_parcels(myG, flist, target_mypath,
+                                                 barriers, quiet=quiet,
+                                                 shortest_only=shortest_only)
 
         # choose and build one
-        nr1, nr2, new_path = choose_path_probablistic(myG, all_paths,
-                                                      alpha)
+        target_ptup, target_mypath = choose_path(myG, all_paths, alpha,
+                                                 strict_greedy=strict_greedy)
+
         if wholepath is False:
-            added_road_length += nr1.length
-            myG.add_road_segment(nr1)
+            added_road_length += target_mypath[0].length
+            myG.add_road_segment(target_mypath[0])
 
         if wholepath is True:
-            for i in range(0, len(new_path) - 1):
-                new_road = myG.G[new_path[i]][new_path[i+1]]["myedge"]
-                added_road_length += new_road.length
-                myG.add_road_segment(new_road)
+            for e in target_mypath:
+                added_road_length += e.length
+                myG.add_road_segment(e)
+
         myG.define_interior_parcels()
         if plot_intermediate:
             myG.plot_roads(master, update=False)
-            plt.savefig("Intermediate_Step"+str(plotnum)+".pdf", format='pdf')
-            plotnum += 1
+            # plt.savefig("Int_Step"+str(plotnum)+".pdf", format='pdf')
+            # plotnum += 1
 
         remain = len(myG.interior_parcels)
         if quiet is False:
             print "{} interior parcels left".format(remain)
         if vquiet is False:
             if remain > 300 or remain in [50, 100, 150, 200, 225, 250, 275]:
-                print "{} interior parcels".format(remain)
+                pass
+                # print "{} interior parcels left".format(remain)
 
         # update the properties of nodes & edges to reflect new geometry.
 
+    myG.added_roads = added_road_length
+    return added_road_length
+
+
+def bisecting_road(myG):
     # once done getting all interior parcels connected, have option to bisect
     bisecting_roads = 0
-    if bisect:
-        start, finish = bisecting_path_endpoints(myG)
-        ptup, myedges = build_path(myG, start, finish)
-        bisecting_roads = path_length(ptup)
 
-    if plot_result:
-        myG.plot_roads(original_roads, update=False,
-                       parcel_labels=False, new_road_color="blue")
-        plt.title("All Parcels Connected," +
-                  "\n New Road Len = {:.0f}".format(new_roads_i))
+    start, finish = bisecting_path_endpoints(myG)
+    ptup, myedges = build_path(myG, start, finish)
+    bisecting_roads = path_length(ptup)
 
-    myG.added_roads = added_road_length + bisecting_roads
-    return added_road_length, bisecting_roads
+    myG.added_roads = myG.added_roads + bisecting_roads
+    return bisecting_roads
 
 
 ############################
@@ -706,14 +775,6 @@ def graphFromShapes(shapes, name, rezero=np.array([0, 0])):
     return myG
 
 
-def build_barriers(myG, edgelist):
-    # assert isinstance(edgelist[0], mg.MyEdge), "{} is not and edge".
-    # format(edgelist[0])
-    for e in edgelist:
-        if e in myG.myedges():
-            myG.remove_road_segment(e)
-            e.barrier = True
-
 ####################
 # PLOTTING FUNCTIONS
 ####################
@@ -808,7 +869,7 @@ def plotly_notebook(traces, filename=None, title=None):
 #####################
 
 
-def import_and_setup(component, filename, threshold=1,
+def import_and_setup(filename, threshold=1, component=None,
                      rezero=np.array([0, 0]), connected=False, name=""):
     plt.close('all')
 
@@ -820,7 +881,7 @@ def import_and_setup(component, filename, threshold=1,
 
     myG = myG.clean_up_geometry(threshold, connected)
 
-    if connected is True:
+    if component is None:
         return myG
     else:
         return myG.connected_components()[component]
@@ -839,22 +900,13 @@ def test_edges_equality():
     return outerE is testG.G[outerE.nodes[0]][outerE.nodes[1]]['myedge']
 
 
-def test_weak_duals():
+def test_dual(myG):
     """ plots the weak duals based on testGraph"""
-    S0 = testGraph()
-    S1 = S0.weak_dual()
-    S2 = S1.weak_dual()
-    S3 = S2.weak_dual()
 
-    fig = plt.figure()
-    ax = fig.add_subplot(111)
-    S0.plot(ax=ax, node_color='b', edge_color='k', node_size=300)
-    S1.plot(ax=ax, node_color='g', edge_color='b', node_size=200)
-    S2.plot(ax=ax, node_color='r', edge_color='g', node_size=100)
-    S3.plot(ax=ax, node_color='c', edge_color='r', node_size=50)
-    ax.legend()
-    ax.set_title("Test Graph")
-    plt.show()
+    S0 = myG.weak_dual()
+
+    myG.plot_roads(update=False)
+    S0.plot(node_color='g', edge_color='g', width=3)
 
 
 def test_nodes(n1, n2):
@@ -863,6 +915,15 @@ def test_nodes(n1, n2):
     is_num = len(set([id(n) for n in n1])
                  .intersection(set([id(n) for n in n2])))
     print "is eq? ", eq_num, "is is? ", is_num
+
+
+def test_interior_is_inner(myG):
+    myG.inner_facelist
+    myG.interior_parcels
+    in0 = myG.interior_parcels[0]
+    ans = in0 in myG.inner_facelist
+
+    print"interior in inner_facelist is {}".format(ans)
 
 
 def testGraph():
@@ -907,7 +968,7 @@ def testGraph():
     return lat
 
 
-def testGraphLattice(n, xshift = 0 , yshift = 0 ):
+def testGraphLattice(n, xshift=0, yshift=0):
     """returns a square lattice of dimension nxn   """
     nodelist = {}
     for j in range(0, n**2):
@@ -1015,21 +1076,32 @@ def build_lattice_barrier(myG):
 
 
 if __name__ == "__main__":
-    S0, n = testGraphLattice()
-    S0.define_roads()
-    S0.define_interior_parcels()
+    master = testGraphLattice(7)
+    master.name = "Lat_0"
+    master.define_roads()
+    master.define_interior_parcels()
     # S0, barrier_edges = build_lattice_barrier(S0)
-    barGraph = graphFromMyEdges(barrier_edges)
-    master = S0.copy()
+    # barGraph = graphFromMyEdges(barrier_edges)
+    S0 = master.copy()
 
     # S0.plot_roads(master, update=False, new_plot=True)
 
-    new_roads_i = build_all_roads(S0, S0, alpha=2, wholepath=True,
-                                  barriers=False)
+    test_dual(S0)
 
-    S0.plot_roads(master, update=False)
-    # barGraph.plot(node_size=25, node_color='green', width=3,
-    #              edge_color='green')
+    S0 = master.copy()
+    new_roads_i = build_all_roads(S0, master, alpha=2, wholepath=True,
+                                  barriers=False, plot_intermediate=False,
+                                  strict_greedy=True, vquiet=True,
+                                  outsidein=True)
 
-    S1 = S0.weak_dual()
-    S1.plot()
+    S0.plot_roads()
+    print "outside to in" + str(new_roads_i)
+
+    S0 = master.copy()
+    new_roads_i = build_all_roads(S0, master, alpha=2, wholepath=True,
+                                  barriers=False, plot_intermediate=True,
+                                  strict_greedy=True, vquiet=True,
+                                  outsidein=False)
+
+    S0.plot_roads()
+    print "inside out" + str(new_roads_i)
