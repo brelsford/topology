@@ -968,12 +968,12 @@ def testGraph():
     return lat
 
 
-def testGraphLattice(n, xshift=0, yshift=0):
+def testGraphLattice(n, xshift=0, yshift=0, scale=1):
     """returns a square lattice of dimension nxn   """
     nodelist = {}
     for j in range(0, n**2):
-        x = math.fmod(j, n) + xshift
-        y = math.floor((j/n)) + yshift
+        x = (math.fmod(j, n))*scale + xshift
+        y = (math.floor(j/n))*scale + yshift
         nodelist[j] = mg.MyNode((x, y))
 
     edgelist = defaultdict(list)
@@ -983,7 +983,7 @@ def testGraphLattice(n, xshift=0, yshift=0):
         for j in nodelist.keys():
             nj = nodelist[j]
             if ni != nj:
-                if distance(ni, nj) == 1:
+                if distance(ni, nj) == scale:
                     edgelist[ni].append(nj)
 
     myedgelist = []
