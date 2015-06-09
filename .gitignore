@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 ###Python###
 
 # Byte-compiled / optimized / DLL files
@@ -78,3 +79,9 @@ Icon
 Network Trash Folder
 Temporary Items
 .apdisk
+=======
+
+*.pdf
+
+*.pyc
+>>>>>>> master
