@@ -74,7 +74,7 @@ class MyNode(object):
     def __init__(self, locarray, name=None):
         significant_figs = 2
         if len(locarray) != 2:
-            print "error"
+            print("error")
         x = locarray[0]
         y = locarray[1]
         self.x = np.round(float(x), significant_figs)
@@ -340,7 +340,7 @@ class MyGraph(object):
         """
 
         dropped_edges = 0
-        for edge, node_list in bad_edge_dict.iteritems():
+        for edge, node_list in bad_edge_dict.items():
             # print "dropping edge {}".format((edge.nodes[0],edge.nodes[1]))
             self.G.remove_edge(edge.nodes[0], edge.nodes[1])
             dropped_edges = dropped_edges + 1
