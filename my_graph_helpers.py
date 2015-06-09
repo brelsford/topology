@@ -14,10 +14,15 @@ import my_graph as mg
 
 
 """ This file includes a bunch of helper functions for my_graph.py.
+<<<<<<< HEAD
+There are a bunch of basic spatial geometery functions, some greedy search
+probablilty functions,
+=======
 
 There are a bunch of basic spatial geometery functions,
 
 some greedy search probablilty functions,
+>>>>>>> master
 
 ways to set up and determine the shortest paths from parcel to a road
 
@@ -146,7 +151,7 @@ def bisect_angle(a, b, c, epsilon=0.2, radius=1):
     # if vectors are close to parallel, find vector that is perpendicular to ab
     # if they are not, then find the vector that bisects a and c
     if abs(np.cross(a1.loc, c1.loc)) < 0 + epsilon:
-        # print "vectors {0}{1} and {1}{2} are close to //".format(a,b,c)
+        # print("vectors {0}{1} and {1}{2} are close to //)".format(a,b,c)
         dx = -ay
         dy = ax
     else:
@@ -179,7 +184,7 @@ def WeightedPick(d):
 
     r = random.uniform(0, sum(d.values()))
     s = 0.0
-    for k, w in d.iteritems():
+    for k, w in d.items():
         s += w
         if r < s:
             return k
@@ -376,7 +381,8 @@ def find_short_paths_all_parcels(myA, new_road1=None, new_road2=None,
             counter += 1
             all_paths.update(paths)
     if quiet is False:
-        print "Shortest paths found for {} parcels".format(counter)
+        print ("Shortest paths found for {} parcels".format(counter))
+
     return all_paths
 
 
@@ -453,8 +459,10 @@ def build_all_roads(myG, master=None, alpha=2, plot_intermediate=False,
     myG.define_interior_parcels()
     nr1 = None
     nr2 = None
+
     if vquiet is False:
-        print "Begin w {} Interior Parcels".format(len(myG.interior_parcels))
+        print ("Begin w {} Interior Parcels".format(len(myG.interior_parcels)))
+
     while myG.interior_parcels:
         # find all potential segments
         all_paths = find_short_paths_all_parcels(myG, nr1, nr2,
@@ -485,7 +493,7 @@ def build_all_roads(myG, master=None, alpha=2, plot_intermediate=False,
             if remain > 300 or remain in [50, 100, 150, 200, 225, 250, 275]:
                 print "{} interior parcels".format(remain)
 
-        # update the properties of nodes & edges to reflect new geometry.
+    # update the properties of nodes & edges to reflect new geometry.
 
     # once done getting all interior parcels connected, have option to bisect
     bisecting_roads = 0
@@ -538,7 +546,7 @@ def shortest_path_p2p_matrix(myG, full=False, travelcost=False):
     etup_drop = copy.find_interior_edges()
     if full is False:
         copy.G.remove_edges_from(etup_drop)
-        # print "dropping {} edges".format(len(etup_drop))
+        # print("dropping {} edges".format(len(etup_drop)))
 
     __road_connections_through_culdesac(copy)
 
@@ -669,7 +677,7 @@ def graphFromShapes(shapes, name, rezero=np.array([0, 0])):
         for e in p.edges:
             myG.add_edge(mg.MyEdge(e.nodes))
 
-    print "data loaded"
+    print("data loaded")
 
     return myG
 
@@ -830,7 +838,7 @@ def test_nodes(n1, n2):
     eq_num = len(set(n1).intersection(set(n2)))
     is_num = len(set([id(n) for n in n1])
                  .intersection(set([id(n) for n in n2])))
-    print "is eq? ", eq_num, "is is? ", is_num
+    print("is eq? ", eq_num, "is is? ", is_num)
 
 
 def testGraph():
