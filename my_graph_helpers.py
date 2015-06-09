@@ -14,29 +14,17 @@ import my_graph as mg
 
 
 """ This file includes a bunch of helper functions for my_graph.py.
-<<<<<<< HEAD
-There are a bunch of basic spatial geometery functions, some greedy search
-probablilty functions,
-=======
-
 There are a bunch of basic spatial geometery functions,
-
 some greedy search probablilty functions,
->>>>>>> master
-
 ways to set up and determine the shortest paths from parcel to a road
-
 the code that exists on optimization problem 2: thinking about how to build in
 additional connectivity beyond just minimum access, as well as plotting the
 associated matrices
-
 code for creating a mygraph object from a shapefile or a list of myfaces
 (used for weak dual calculations)
-
 a couple of test graphs- testGraph, (more or less lollipopo shaped) and
 testGraphLattice which is a lattice.
-
-   """
+"""
 
 #############################
 # BASIC MATH AND GEOMETRY FUNCTIONS
