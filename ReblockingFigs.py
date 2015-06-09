@@ -106,18 +106,18 @@ if __name__ == "__main__":
     plt.savefig("Figs/epworth_block.pdf", format='pdf',)
 
     alpha = [0.5, 1, 2, 4, 16, 32, 64]
-    # alpha = [128] # , 64]
+    alpha = [128, 1000] # , 64]
     d = defaultdict(list)
 
     r = 0
 
-    for r in range(0, 50):
+    for r in range(0, 10):
         for a in alpha:
             print "r={}, alpha={}".format(r, a)
             nr = new_length(block, a, r, plot=False)
             print "total new roads {}".format(nr)
             d[a].append(nr)
-            pickle.dump(d, open("epworth_alpha1.p", "wb"))
+            pickle.dump(d, open("epworth_alpha2.p", "wb"))
         plt.close('all')
         r += 1
 
@@ -125,6 +125,6 @@ if __name__ == "__main__":
                                  wholepath=True, strict_greedy=True,
                                  quiet=False, outsidein=True)
 
-    nice_histogram_many(d, [64,32,16,4,1], strict)
+    nice_histogram_many(d, [1000, 128, 64,32,16], strict)
 
     plt.show()
