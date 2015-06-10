@@ -384,7 +384,11 @@ class MyGraph(object):
 
         """ function cleans up geometry, and returns a _copy_  of the graph,
         cleaned up nicely. Does not change original graph. connected considers
+<<<<<<< HEAD
         graph by connected components only for clean up.
+=======
+        graph by connected components only for clean up. 
+>>>>>>> Better-Levels-Representation
         """
 
         Gs = []
@@ -594,7 +598,11 @@ class MyGraph(object):
         # of faces in dual1, for faces in dual1 that overlap a face (face0) in
         # self.
         for face0 in flist:
+<<<<<<< HEAD
             down2_nodes = [f.centroid for f in dual1_faces if
+=======
+            down2_nodes = [f.centroid for f in dual1_faces if 
+>>>>>>> Better-Levels-Representation
                            face0.odd_node[depth-1] in f.nodes]
             face0.even_nodes[depth] = set(down2_nodes)
 #            down2_nodes = []
