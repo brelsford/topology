@@ -1,5 +1,3 @@
-import numpy as np
-import math
 from matplotlib import pyplot as plt
 
 import my_graph_helpers as mgh
@@ -36,7 +34,7 @@ def run_once(filename, name=None):
     block.plot_roads(master=original)
 
     # finds roads to connect all interior parcels
-    new_roads = mgh.build_all_roads(block, barriers=False)
+    new_roads = mgh.build_all_roads(block, barriers=False, wholepath=True)
 
     # plot new roads. original roads (black) defined by original graph.
     block.plot_roads(master=original, parcel_labels=False, new_plot=True)

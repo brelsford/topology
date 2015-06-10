@@ -14,29 +14,17 @@ import my_graph as mg
 
 
 """ This file includes a bunch of helper functions for my_graph.py.
-<<<<<<< HEAD
-There are a bunch of basic spatial geometery functions, some greedy search
-probablilty functions,
-=======
-
 There are a bunch of basic spatial geometery functions,
-
 some greedy search probablilty functions,
->>>>>>> master
-
 ways to set up and determine the shortest paths from parcel to a road
-
 the code that exists on optimization problem 2: thinking about how to build in
 additional connectivity beyond just minimum access, as well as plotting the
 associated matrices
-
 code for creating a mygraph object from a shapefile or a list of myfaces
 (used for weak dual calculations)
-
 a couple of test graphs- testGraph, (more or less lollipopo shaped) and
 testGraphLattice which is a lattice.
-
-   """
+"""
 
 #############################
 # BASIC MATH AND GEOMETRY FUNCTIONS
@@ -294,7 +282,7 @@ def shortest_path_setup(myA, p, roads_only=False):
 
 
 def shortest_path_p2p(myA, p1, p2):
-    """finds the shortest path along fenclines from a given interior parcel
+    """finds the shortest path along fencelines from a given interior parcel
     p1 to another parcel p2"""
 
     __add_fake_edges(myA, p1, roads_only=True)
