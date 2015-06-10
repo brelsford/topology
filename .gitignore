@@ -3,6 +3,7 @@
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]
+*.pyc
 
 # C extensions
 *.so
@@ -79,6 +80,11 @@ Icon
 Network Trash Folder
 Temporary Items
 .apdisk
-=======
+
 
 *.pdf
+*.p
+Figs/*
+results_data/*
+FigureScripts/*
+.ipynb_checkpoints/*
