@@ -85,4 +85,5 @@ Temporary Items
 *.p
 Figs/*
 results_data/*
+FigureScripts/*
 
