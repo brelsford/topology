@@ -83,6 +83,6 @@ Temporary Items
 
 *.pdf
 *.p
-Figs/
-results_data/
+Figs/*
+results_data/*
 
