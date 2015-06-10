@@ -642,7 +642,7 @@ class MyGraph(object):
                     g.inner_facelist
                 except AttributeError:
                     g.__trace_faces()
-                    print "tracing faces needed"
+                    print("tracing faces needed")
 
         return stacks
 
