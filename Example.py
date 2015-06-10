@@ -13,46 +13,63 @@ so different runs will give slightly different answers.
  """
 
 
-def run_once(filename, name=None):
+def run_once(filename, name=None, byblock=True):
 
     if name is None:
         name = filename
 
-    original = mgh.import_and_setup(0, filename, threshold=1,
+    original = mgh.import_and_setup(filename, threshold=1,
                                     name=name)
 
-    block = original.copy()
+    #  add code to sort blocklint by # interior parcels.
+    blocklist = original.connected_components()
 
-    # define existing roads based on block geometery
-    block.define_roads()
+    print "This map has {} block(s).".format(len(blocklist))
 
-    # define interior parcels in the block based on existing roads
-    block.define_interior_parcels()
-
+    # plot original map.
     # plot roads, using the original, unedited version as master to color
     # original roads
-    block.plot_roads(master=original)
+    # block.plot_roads(master=original)
 
-    # finds roads to connect all interior parcels
-    new_roads = mgh.build_all_roads(block, barriers=False, wholepath=True)
+    map_roads = 0
 
-    # plot new roads. original roads (black) defined by original graph.
-    block.plot_roads(master=original, parcel_labels=False, new_plot=True)
+    plt.figure()
 
-    # red: interior parcels, bold black: original roads, blue: new roads,
-    # green: barriers
+    for original in blocklist[0:10]:
 
-    return new_roads
+        # define existing roads based on block geometery
+        original.define_roads()
+        block = original.copy()
+
+        # define interior parcels in the block based on existing roads
+        block.define_interior_parcels()
+
+        # finds roads to connect all interior parcels for a given block
+        block_roads = mgh.build_all_roads(block, wholepath=True)
+        map_roads = map_roads + block_roads
+
+        block.plot_roads(master=original, new_plot=False)
+
+    return map_roads
 
 
 if __name__ == "__main__":
 
+    # SINGLE SMALL BLOCK
     # filename = "data/epworth_demo"
-    # name = "epworth"
+    # name = "ep single"
+    # byblock = True
 
-    filename = "data/capetown"
-    name = "cape"
+    # MANY SMALL BLOCKS
+    filename = "data/epworth_before"
+    name = "ep many"
+    byblock = True
 
-    run_once(filename, name)
+    # ONE LARGE BLOCK
+    # filename = "data/capetown"
+    # name = "cape"
+    # byblock = False
+
+    run_once(filename, name, byblock=byblock)
 
     plt.show()
