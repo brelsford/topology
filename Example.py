@@ -13,40 +13,55 @@ so different runs will give slightly different answers.
  """
 
 
-def run_once(filename, name=None, byblock=True):
+def new_import(filename, name=None, byblock=True, threshold=1):
+    """ imports the file, plots the original map, and returns
+    a list of blocks from the original map.
+    """
 
     if name is None:
         name = filename
 
-    original = mgh.import_and_setup(filename, threshold=1,
+    original = mgh.import_and_setup(filename,
+                                    threshold=threshold,
+                                    byblock=byblock,
                                     name=name)
 
-    #  add code to sort blocklint by # interior parcels.
     blocklist = original.connected_components()
 
-    print "This map has {} block(s).".format(len(blocklist))
-
-    # plot original map.
-    # plot roads, using the original, unedited version as master to color
-    # original roads
-    # block.plot_roads(master=original)
-
-    map_roads = 0
+    print "This map has {} block(s). \n".format(len(blocklist))
 
     plt.figure()
+    # plot the full original map
+    for b in blocklist:
+        # defines original geometery as a side effect,
+        b.plot_roads(master=b, new_plot=False, update=True)
 
-    for original in blocklist[0:10]:
+    blocklist.sort(key=lambda b: len(b.interior_parcels), reverse=True)
 
-        # define existing roads based on block geometery
-        original.define_roads()
-        block = original.copy()
+    return blocklist
 
-        # define interior parcels in the block based on existing roads
-        block.define_interior_parcels()
 
-        # finds roads to connect all interior parcels for a given block
-        block_roads = mgh.build_all_roads(block, wholepath=True)
-        map_roads = map_roads + block_roads
+def run_once(blocklist):
+
+    """Given a list of blocks, builds roads to connect all interior parcels and
+    plots all blocks in the same figure.
+    """
+
+    map_roads = 0
+    plt.figure()
+
+    for original in blocklist:
+        if len(original.interior_parcels) > 0:
+            block = original.copy()
+
+            # define interior parcels in the block based on existing roads
+            block.define_interior_parcels()
+
+            # finds roads to connect all interior parcels for a given block
+            block_roads = mgh.build_all_roads(block, wholepath=True)
+            map_roads = map_roads + block_roads
+        else:
+            block = original.copy()
 
         block.plot_roads(master=original, new_plot=False)
 
@@ -59,17 +74,24 @@ if __name__ == "__main__":
     # filename = "data/epworth_demo"
     # name = "ep single"
     # byblock = True
+    # threshold = 0.5
 
     # MANY SMALL BLOCKS
-    filename = "data/epworth_before"
-    name = "ep many"
-    byblock = True
+    # some of the blocks here require a threshold of 0.5
+    # filename = "data/epworth_before"
+    # name = "ep many"
+    # byblock = True
+    # threshold = 0.5
 
     # ONE LARGE BLOCK
-    # filename = "data/capetown"
-    # name = "cape"
-    # byblock = False
+    filename = "data/capetown"
+    name = "cape"
+    byblock = False
+    threshold = 1
 
-    run_once(filename, name, byblock=byblock)
+    blocklist = new_import(filename, name, byblock=byblock,
+                           threshold=threshold)
+
+    map_roads = run_once(blocklist)
 
     plt.show()
