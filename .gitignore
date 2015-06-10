@@ -80,7 +80,9 @@ Network Trash Folder
 Temporary Items
 .apdisk
 
+
 *.pdf
 *.p
-
+Figs/
+results_data/
 
