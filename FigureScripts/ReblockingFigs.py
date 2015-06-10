@@ -20,14 +20,15 @@ def new_length(block, a, r, plot=False):
     myG.define_roads()
     myG.define_interior_parcels()
 
-    new_roads, bisect = mgh.build_all_roads(myG, barriers=False, alpha=a, 
-                                            wholepath=True, quiet=True)
+    new_roads = mgh.build_all_roads(myG, barriers=False, alpha=a,
+                                    wholepath=True, strict_greedy=False,
+                                    quiet=False, outsidein=False)
     if plot:
         myG.plot_roads(master=block, new_road_width=1.5, old_node_size=0.5,
                        old_road_width=2, base_width=0.5, barriers=False)
-        plt.savefig('Figs/{0}_a{1}_r{2}.pdf'.format(myG.name, str(a), str(r)),
+        plt.savefig('Figs/{}_a{}_r{}.pdf'.format(myG.name, str(a), str(r)),
                     format='pdf')
-    plt.close('all')
+    # plt.close('all')
     return new_roads
 
 
@@ -54,54 +55,76 @@ def nice_histogram(a, x, bounds=None):
     plt.ylabel('Probability')
     plt.title(r'$\alpha = {0}$'.format(a))
     plt.text(0.05, .8, textstr, transform=ax.transAxes)
-    plt.savefig("histogram_alpha_"+str(a)+".pdf", format='pdf', pad_inches=0.5)
+    plt.savefig("epworth_histogram_alpha_"+str(a)+".pdf", format='pdf',
+                pad_inches=0.5)
 
 
-def nice_histogram_many(d):
+def nice_histogram_many(d, keys, xval):
     num_bins = 80
     plt.figure()
-    for a in d.keys():
+    plt.vlines(x=xval, ymin=0, ymax=1, linewidth=3, colors='orange',
+               linestyles='dashed')
+    for a in keys:
         n, bins, patches = plt.hist(d[a], num_bins, normed=1, cumulative=True,
-                                    histtype='step', alpha=0.5,
+                                    histtype='stepfilled', alpha=0.5,
                                     label="a = {}".format(a))
         plt.legend(loc='lower right')
+
+    plt.savefig("Figs/full_histogram_epworth_outside_in.pdf", format='pdf')
 
 
 if __name__ == "__main__":
 
-    if False:
-        filename = "data/capetown"
-        place = "cape"
+    if True:
+        filename = "data/epworth_before"
+        place = "epworth"
         crezero = np.array([-31900, -3766370])
-        original = mgh.import_and_setup(0, filename, rezero=crezero,
-                                        threshold=1, connected=False,
+        erezero = np.array([305680, 8022350])
+        original = mgh.import_and_setup(filename, rezero=erezero,
+                                        component=None,
+                                        threshold=1, connected=True,
                                         name=place+"_S0")
 
-    block = original.copy()
-    block.define_roads()
-    block.define_interior_parcels()
+    blocklist = original.connected_components()
+
+    sevens = []
+    comp = 0
+
+    for g in blocklist:
+        comp += 1
+        g.define_roads()
+        g.define_interior_parcels()
+        if len(g.interior_parcels) == 7:
+            sevens.append(g)
+
+    block = sevens[3]
 
     myG = block.copy()
 
-    # myG.plot_roads(master=block, new_road_width=1.5, old_node_size=0.5,
-    #                old_road_width=2, base_width=0.5)
-    # plt.savefig("Figs/cape_block.pdf", format='pdf',)
+    myG.plot_roads(master=block, new_road_width=1.5, old_node_size=0.5,
+                   old_road_width=2, base_width=0.5)
+    plt.savefig("Figs/epworth_block.pdf", format='pdf',)
 
-    alpha = [4, 16, 2]
+    alpha = [0.5, 1, 2, 4, 16, 32, 64]
+    alpha = [128, 1000] # , 64]
     d = defaultdict(list)
 
-    for a in alpha:
-        r = 0
-        print "alpha = {}".format(a)
-        for r in range(0, 10):
-            nr = new_length(block, a, r, plot=True)
-            d[a].append(nr)
+    r = 0
+
+    for r in range(0, 10):
+        for a in alpha:
             print "r={}, alpha={}".format(r, a)
+            nr = new_length(block, a, r, plot=False)
+            print "total new roads {}".format(nr)
+            d[a].append(nr)
+            pickle.dump(d, open("epworth_alpha2.p", "wb"))
+        plt.close('all')
+        r += 1
 
-            r =+ 1
-            pickle.dump(d, open("d_results2.p", "wb"))
-            plt.close('all')
+    strict = mgh.build_all_roads(block.copy(), barriers=False, alpha=16,
+                                 wholepath=True, strict_greedy=True,
+                                 quiet=False, outsidein=True)
 
-    nice_histogram_many(d)
+    nice_histogram_many(d, [1000, 128, 64,32,16], strict)
 
     plt.show()
