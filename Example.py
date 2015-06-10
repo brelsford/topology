@@ -28,7 +28,7 @@ def new_import(filename, name=None, byblock=True, threshold=1):
 
     blocklist = original.connected_components()
 
-    print "This map has {} block(s). \n".format(len(blocklist))
+    print("This map has {} block(s). \n".format(len(blocklist)))
 
     plt.figure()
     # plot the full original map
