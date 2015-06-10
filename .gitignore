@@ -3,6 +3,7 @@
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]
+*.pyc
 
 # C extensions
 *.so
@@ -86,4 +87,4 @@ Temporary Items
 Figs/*
 results_data/*
 FigureScripts/*
-
+.ipynb_checkpoints/*
