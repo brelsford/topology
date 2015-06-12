@@ -137,16 +137,16 @@ class MyEdge(object):
     def __hash__(self):
         return hash(self.nodes)
 
-    def geoJSON(e, prj="urn:ogc:def:crs:EPSG::3857"):
+    def geoJSON(self):
         return {
                    "type": "Feature",
                    "geometry": {
                        "type": "LineString",
-                       "coordinates": [list([n.x, n.y]) for n in e.nodes]
+                       "coordinates": [list([n.x, n.y]) for n in self.nodes]
                    },
                    "properties": {
-                       "road": str(e.road).lower(),
-                       "interior": str(e.interior).lower()
+                       "road": str(self.road).lower(),
+                       "interior": str(self.interior).lower()
                    }
                }
 
@@ -310,8 +310,7 @@ class MyGraph(object):
 
     def myedges_geoJSON(self):
         return json.dumps({"type": "FeatureCollection",
-                           "features": [e.geoJSON(self.projection)
-                                        for e in self.myedges()]})
+                           "features": [e.geoJSON() for e in self.myedges()]})
 
 
 ############################
