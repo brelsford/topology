@@ -3,6 +3,7 @@ import networkx as nx
 import itertools
 import math
 import warnings
+import json
 from matplotlib import pyplot as plt
 import my_graph_helpers as mgh
 from lazy_property import lazy_property
@@ -136,6 +137,25 @@ class MyEdge(object):
     def __hash__(self):
         return hash(self.nodes)
 
+    def geoJSON(e, prj="urn:ogc:def:crs:EPSG::3857"):
+        return {
+                   "type": "Feature",
+                   "geometry": {
+                       "type": "LineString",
+                       "coordinates": [list([n.x, n.y]) for n in e.nodes]
+                   },
+                   "properties": {
+                       "road": str(e.road).lower(),
+                       "inner": str(e.interior).lower()
+                   },
+                   'crs': {
+                       'type': 'name',
+                       'properties': {
+                           'name': prj
+                       }
+                   }
+               }
+
 
 class MyFace(object):
     """class defines a face (with name and list of edges & nodes)
@@ -224,7 +244,7 @@ class MyGraph(object):
         self.name = name
         self.cleaned = False
         self.roads_update = True
-        self.copy_count = 0
+        self.projection = None
 
         if G is None:
             self.G = nx.Graph()
@@ -270,7 +290,6 @@ class MyGraph(object):
         nx_copy = self.G.copy()
         copy = MyGraph(nx_copy)
         copy.name = self.name
-        copy.copy_count = self.copy_count + 1
 
         # outerface is a side effect of the creation of inner_facelist
         # so we operate on that in order to not CALL inner_facelist for every
@@ -295,6 +314,11 @@ class MyGraph(object):
         inner_facelist = self.__trace_faces()
         # print "inner_facelist called for graph {}".format(self)
         return inner_facelist
+
+    def myedges_geoJSON(self):
+        return json.dumps({"type": "FeatureCollection",
+                           "features": [e.geoJSON(self.projection)
+                                        for e in self.myedges()]})
 
 
 ############################
