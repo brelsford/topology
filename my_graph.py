@@ -146,13 +146,7 @@ class MyEdge(object):
                    },
                    "properties": {
                        "road": str(e.road).lower(),
-                       "inner": str(e.interior).lower()
-                   },
-                   'crs': {
-                       'type': 'name',
-                       'properties': {
-                           'name': prj
-                       }
+                       "interior": str(e.interior).lower()
                    }
                }
 
@@ -244,7 +238,6 @@ class MyGraph(object):
         self.name = name
         self.cleaned = False
         self.roads_update = True
-        self.projection = None
 
         if G is None:
             self.G = nx.Graph()

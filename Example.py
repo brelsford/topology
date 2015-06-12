@@ -96,7 +96,7 @@ if __name__ == "__main__":
 
     g.projection = "urn:ogc:def:crs:EPSG::3857"
 
-    print g.myedges_geoJSON()
+    ep_geojson = g.myedges_geoJSON()
 
     map_roads = run_once(blocklist)
 
