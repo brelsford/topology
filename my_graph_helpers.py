@@ -546,8 +546,8 @@ def build_all_roads(myG, master=None, alpha=2, plot_intermediate=False,
 
         if quiet is False:
             print("Cur max depth is {}; {}".format(md, len(flist)) +
-                  " parcels at current depth. \n" +
-                  "{0:.1f} new roads so far".format(added_road_length))
+                   " parcels at current depth. \n" +
+                   "{0:.1f} new roads so far".format(added_road_length))
 
         # potential segments from parcels in flist
 
@@ -1033,21 +1033,6 @@ def testGraphEquality():
     G.add_edge(mg.MyEdge((n[7], n[8])))
 
     return G, n
-
-
-def json_test(test_geojson):
-    """  If the good geoJSON request does not show an OK status message, the
-    validation server is down.  """
-
-    validate_endpoint = 'http://geojsonlint.com/validate'
-    good_geojson = '{"type": "Point", "coordinates": [-100, 80]}'
-    good_request = requests.post(validate_endpoint, data=good_geojson)
-    test_request = requests.post(validate_endpoint, data=test_geojson)
-    print "hard coded good geoJSON:"
-    print good_request.json()
-    print "status for test geojson"    
-    print test_request.json()
-    
 
 
 def __centroid_test():
