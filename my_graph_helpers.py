@@ -1043,11 +1043,11 @@ def json_test(test_geojson):
     good_geojson = '{"type": "Point", "coordinates": [-100, 80]}'
     good_request = requests.post(validate_endpoint, data=good_geojson)
     test_request = requests.post(validate_endpoint, data=test_geojson)
-    print "hard coded good geoJSON:"
-    print good_request.json()
-    print "status for test geojson"    
-    print test_request.json()
-    
+    print("hard coded good geoJSON:")
+    print(good_request.json())
+    print("status for test geojson:")
+    print(test_request.json())
+
 
 
 def __centroid_test():
