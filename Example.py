@@ -71,10 +71,10 @@ def run_once(blocklist):
 if __name__ == "__main__":
 
     # SINGLE SMALL BLOCK
-    # filename = "data/epworth_demo"
-    # name = "ep single"
-    # byblock = True
-    # threshold = 0.5
+    filename = "data/epworth_demo"
+    name = "ep single"
+    byblock = True
+    threshold = 0.5
 
     # MANY SMALL BLOCKS
     # some of the blocks here require a threshold of 0.5
@@ -84,13 +84,17 @@ if __name__ == "__main__":
     # threshold = 0.5
 
     # ONE LARGE BLOCK
-    filename = "data/capetown"
-    name = "cape"
-    byblock = False
-    threshold = 1
+    # filename = "data/capetown"
+    # name = "cape"
+    # byblock = False
+    # threshold = 1
 
     blocklist = new_import(filename, name, byblock=byblock,
                            threshold=threshold)
+
+    g = blocklist[0]
+
+    ep_geojson = g.myedges_geoJSON()
 
     map_roads = run_once(blocklist)
 
