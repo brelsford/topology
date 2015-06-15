@@ -77,9 +77,9 @@ Several plotting and example functions are also included:
 This file includes a bunch of helper functions for my_graph.py, with a
 a variety of categories:
 
-1) spatial geometery functions,
-2) greedy search probablilty functions,
-3) Ways to set up and determine the shortest paths from parcel to a road
-4) importing and setting up a mygraph from a shapefile or list of existing faces
-5) test functions and test graphs. 
+1. spatial geometery functions,
+2. greedy search probablilty functions,
+3. Ways to set up and determine the shortest paths from parcel to a road
+4. importing and setting up a mygraph from a shapefile or list of existing faces
+5. test functions and test graphs. 
 
