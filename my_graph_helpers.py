@@ -900,6 +900,25 @@ def import_and_setup(filename, threshold=1, component=None,
         return myG.connected_components()[component]
 
 
+def rescale_mygraph(myG, rezero=np.array([0, 0]), rescale=np.array([1, 1])):
+
+    """returns a new graph (with no interior properties defined), rescaled under
+    a linear function newloc = (oldloc-rezero)*rescale  where all of those are
+    (x,y) numpy arrays.  Default of rezero = (0,0) and rescale = (1,1) means
+    the locations of nodes in the new and old graph are the same.
+    """
+
+    scaleG = mg.MyGraph()
+    for e in myG.myedges():
+        n0 = e.nodes[0]
+        n1 = e.nodes[1]
+        nn0 = mg.MyNode((n0.loc-rezero)*rescale)
+        nn1 = mg.MyNode((n1.loc-rezero)*rescale)
+        scaleG.add_edge(mg.MyEdge((nn0, nn1)))
+
+    return scaleG
+
+
 ####################
 # Testing functions
 ###################
@@ -1045,9 +1064,9 @@ def json_test(test_geojson):
     test_request = requests.post(validate_endpoint, data=test_geojson)
     print "hard coded good geoJSON:"
     print good_request.json()
-    print "status for test geojson"    
+    print "status for test geojson"
     print test_request.json()
-    
+
 
 
 def __centroid_test():
