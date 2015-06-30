@@ -844,7 +844,48 @@ def make_colormap(seq):
     return mcolors.LinearSegmentedColormap('CustomMap', cdict)
 
 
-def plotly_notebook(traces, filename=None, title=None):
+
+def plotly_traces(myG):
+    """myGraph to plotly trace   """
+
+    # add the edges as disconnected lines in a trace
+    edge_trace = Scatter(x=[], y=[], mode='lines',
+                         name='Parcel Boundaries',
+                         line=Line(color='grey', width=0.5))
+    road_trace = Scatter(x=[], y=[], mode='lines',
+                         name='Road Boundaries',
+                         line=Line(color='black', width=2))
+    interior_trace = Scatter(x=[], y=[], mode='lines',
+                             name='Interior Parcels',
+                             line=Line(color='red', width=2.5))
+    barrier_trace = Scatter(x=[], y=[], mode='lines',
+                            name='Barriers',
+                            line=Line(color='green', width=0.75))
+
+    for i in myG.connected_components():
+        for edge in i.myedges():
+            x0, y0 = edge.nodes[0].loc
+            x1, y1 = edge.nodes[1].loc
+            edge_trace['x'] += [x0, x1, None]
+            edge_trace['y'] += [y0, y1, None]
+            if edge.road:
+                road_trace['x'] += [x0, x1, None]
+                road_trace['y'] += [y0, y1, None]
+            if edge.interior:
+                interior_trace['x'] += [x0, x1, None]
+                interior_trace['y'] += [y0, y1, None]
+            if edge.barrier:
+                barrier_trace['x'] += [x0, x1, None]
+                barrier_trace['y'] += [y0, y1, None]
+
+    return [edge_trace, road_trace, interior_trace, barrier_trace]
+
+
+def plotly_graph(traces, filename=None, title=None):
+    """ use py.iplot(fig,filename) after this function in ipython notrbook to
+    show the resulting plotly figure inline, or url=py.plot(fig,filename) to 
+    just get url of resulting fig and not plot inline. """
+
     if filename is None:
         filename = "plotly_graph"
     fig = Figure(data=Data(traces),
@@ -854,7 +895,8 @@ def plotly_notebook(traces, filename=None, title=None):
                                            showticklabels=False),
                                yaxis=YAxis(showgrid=False, zeroline=False,
                                            showticklabels=False)))
-    py.iplot(fig, filename=filename)
+    #py.iplot(fig, filename=filename)
+    return fig, filename
 
 
 ######################
@@ -1066,7 +1108,6 @@ def json_test(test_geojson):
     print good_request.json()
     print "status for test geojson"
     print test_request.json()
-
 
 
 def __centroid_test():
