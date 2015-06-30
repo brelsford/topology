@@ -137,12 +137,12 @@ class MyEdge(object):
     def __hash__(self):
         return hash(self.nodes)
 
-    def geoJSON(self):
+    def geoJSON(self,rezero):
         return {
                    "type": "Feature",
                    "geometry": {
                        "type": "LineString",
-                       "coordinates": [list([n.x, n.y]) for n in self.nodes]
+                       "coordinates": [list([n.x+rezero[0], n.y+rezero[1]]) for n in self.nodes]
                    },
                    "properties": {
                        "road": str(self.road).lower(),
@@ -238,6 +238,7 @@ class MyGraph(object):
         self.name = name
         self.cleaned = False
         self.roads_update = True
+        self.rezero_vector = np.array([0,0])
 
         if G is None:
             self.G = nx.Graph()
@@ -283,6 +284,7 @@ class MyGraph(object):
         nx_copy = self.G.copy()
         copy = MyGraph(nx_copy)
         copy.name = self.name
+        copy.rezero_vector = self.rezero_vector
 
         # outerface is a side effect of the creation of inner_facelist
         # so we operate on that in order to not CALL inner_facelist for every
@@ -310,7 +312,7 @@ class MyGraph(object):
 
     def myedges_geoJSON(self):
         return json.dumps({"type": "FeatureCollection",
-                           "features": [e.geoJSON() for e in self.myedges()]})
+                           "features": [e.geoJSON(self.rezero_vector) for e in self.myedges()]})
 
 
 ############################
