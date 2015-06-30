@@ -928,18 +928,26 @@ def import_and_setup(filename, threshold=1, component=None,
     # check that threshold is a float
 
     sf = shapefile.Reader(filename)
-    myG = graphFromShapes(sf.shapes(), name, rezero)
+    myG1 = graphFromShapes(sf.shapes(), name, rezero)
 
     print("shape file loaded")
 
-    myG = myG.clean_up_geometry(threshold, byblock)
+    myG1 = myG1.clean_up_geometry(threshold, byblock)
 
     print("geometery cleaned up")
 
+    xmin = min([n.x for n in myG1.G.nodes()])
+    ymin = min([n.y for n in myG1.G.nodes()])
+
+    rezero_vector = np.array([xmin, ymin])
+
+    myG2 = rescale_mygraph(myG1, rezero=rezero_vector)
+    myG2.rezero_vector = rezero_vector
+
     if component is None:
-        return myG
+        return myG2
     else:
-        return myG.connected_components()[component]
+        return myG2.connected_components()[component]
 
 
 def rescale_mygraph(myG, rezero=np.array([0, 0]), rescale=np.array([1, 1])):
