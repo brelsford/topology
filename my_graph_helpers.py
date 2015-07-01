@@ -9,8 +9,8 @@ import itertools
 import operator
 import matplotlib.colors as mcolors
 from scipy.cluster.hierarchy import linkage, dendrogram
-import plotly.plotly as py
-from plotly.graph_objs import *
+#import plotly.plotly as py
+#from plotly.graph_objs import *
 
 import my_graph as mg
 
@@ -366,8 +366,8 @@ def find_short_paths(myA, parcel, barriers=True, shortest_only=False):
         shortest_path_distance = path_length(shortest_path[1:-1])
         all_simple = [shorten_path(p[1:-1]) for p in nx.all_simple_paths(myA.G,
                       road, interior, cutoff=shortest_path_segments + 2)]
-        paths = {tuple(p): path_length(p) for p in all_simple
-                 if path_length(p) < shortest_path_distance*2}
+        paths = dict((tuple(p), path_length(p)) for p in all_simple
+                 if path_length(p) < shortest_path_distance*2)
     if shortest_only is True:
         p = shorten_path(shortest_path[1:-1])
         paths = {tuple(p): path_length(p)}
@@ -467,7 +467,7 @@ def choose_path(myG, paths, alpha, strict_greedy=False):
     length more frequently  """
 
     if strict_greedy is False:
-        inv_weight = {k: 1.0/(paths[k]**alpha) for k in paths}
+        inv_weight = dict((k, 1.0/(paths[k]**alpha)) for k in paths)
         target_path = WeightedPick(inv_weight)
     if strict_greedy is True:
         target_path = min(paths, key=paths.get)

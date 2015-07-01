@@ -8,8 +8,8 @@ from matplotlib import pyplot as plt
 import my_graph_helpers as mgh
 from lazy_property import lazy_property
 
-import plotly.plotly as py
-from plotly.graph_objs import *
+#import plotly.plotly as py
+#from plotly.graph_objs import *
 
 
 """
@@ -260,7 +260,7 @@ class MyGraph(object):
         self.G.add_edge(e.nodes[0], e.nodes[1], myedge=e, weight=w)
 
     def location_dict(self):
-        return {n: n.loc for n in self.G.nodes_iter()}
+        return dict((n, n.loc) for n in self.G.nodes_iter())
 
     def connected_components(self):
         return [MyGraph(g, self.name) for i, g
