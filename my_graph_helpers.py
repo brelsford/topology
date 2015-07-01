@@ -844,7 +844,48 @@ def make_colormap(seq):
     return mcolors.LinearSegmentedColormap('CustomMap', cdict)
 
 
-def plotly_notebook(traces, filename=None, title=None):
+
+def plotly_traces(myG):
+    """myGraph to plotly trace   """
+
+    # add the edges as disconnected lines in a trace
+    edge_trace = Scatter(x=[], y=[], mode='lines',
+                         name='Parcel Boundaries',
+                         line=Line(color='grey', width=0.5))
+    road_trace = Scatter(x=[], y=[], mode='lines',
+                         name='Road Boundaries',
+                         line=Line(color='black', width=2))
+    interior_trace = Scatter(x=[], y=[], mode='lines',
+                             name='Interior Parcels',
+                             line=Line(color='red', width=2.5))
+    barrier_trace = Scatter(x=[], y=[], mode='lines',
+                            name='Barriers',
+                            line=Line(color='green', width=0.75))
+
+    for i in myG.connected_components():
+        for edge in i.myedges():
+            x0, y0 = edge.nodes[0].loc
+            x1, y1 = edge.nodes[1].loc
+            edge_trace['x'] += [x0, x1, None]
+            edge_trace['y'] += [y0, y1, None]
+            if edge.road:
+                road_trace['x'] += [x0, x1, None]
+                road_trace['y'] += [y0, y1, None]
+            if edge.interior:
+                interior_trace['x'] += [x0, x1, None]
+                interior_trace['y'] += [y0, y1, None]
+            if edge.barrier:
+                barrier_trace['x'] += [x0, x1, None]
+                barrier_trace['y'] += [y0, y1, None]
+
+    return [edge_trace, road_trace, interior_trace, barrier_trace]
+
+
+def plotly_graph(traces, filename=None, title=None):
+    """ use py.iplot(fig,filename) after this function in ipython notrbook to
+    show the resulting plotly figure inline, or url=py.plot(fig,filename) to 
+    just get url of resulting fig and not plot inline. """
+
     if filename is None:
         filename = "plotly_graph"
     fig = Figure(data=Data(traces),
@@ -854,7 +895,8 @@ def plotly_notebook(traces, filename=None, title=None):
                                            showticklabels=False),
                                yaxis=YAxis(showgrid=False, zeroline=False,
                                            showticklabels=False)))
-    py.iplot(fig, filename=filename)
+    #py.iplot(fig, filename=filename)
+    return fig, filename
 
 
 ######################
@@ -886,18 +928,45 @@ def import_and_setup(filename, threshold=1, component=None,
     # check that threshold is a float
 
     sf = shapefile.Reader(filename)
-    myG = graphFromShapes(sf.shapes(), name, rezero)
+    myG1 = graphFromShapes(sf.shapes(), name, rezero)
 
     print("shape file loaded")
 
-    myG = myG.clean_up_geometry(threshold, byblock)
+    myG1 = myG1.clean_up_geometry(threshold, byblock)
 
     print("geometery cleaned up")
 
+    xmin = min([n.x for n in myG1.G.nodes()])
+    ymin = min([n.y for n in myG1.G.nodes()])
+
+    rezero_vector = np.array([xmin, ymin])
+
+    myG2 = rescale_mygraph(myG1, rezero=rezero_vector)
+    myG2.rezero_vector = rezero_vector
+
     if component is None:
-        return myG
+        return myG2
     else:
-        return myG.connected_components()[component]
+        return myG2.connected_components()[component]
+
+
+def rescale_mygraph(myG, rezero=np.array([0, 0]), rescale=np.array([1, 1])):
+
+    """returns a new graph (with no interior properties defined), rescaled under
+    a linear function newloc = (oldloc-rezero)*rescale  where all of those are
+    (x,y) numpy arrays.  Default of rezero = (0,0) and rescale = (1,1) means
+    the locations of nodes in the new and old graph are the same.
+    """
+
+    scaleG = mg.MyGraph()
+    for e in myG.myedges():
+        n0 = e.nodes[0]
+        n1 = e.nodes[1]
+        nn0 = mg.MyNode((n0.loc-rezero)*rescale)
+        nn1 = mg.MyNode((n1.loc-rezero)*rescale)
+        scaleG.add_edge(mg.MyEdge((nn0, nn1)))
+
+    return scaleG
 
 
 ####################
@@ -1047,7 +1116,6 @@ def json_test(test_geojson):
     print(good_request.json())
     print("status for test geojson:")
     print(test_request.json())
-
 
 
 def __centroid_test():

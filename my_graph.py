@@ -89,7 +89,7 @@ class MyNode(object):
         if self.name:
             return self.name
         else:
-            return "(%.2f,%.2f)" % (self.x, self.y)
+            return "(%.3f,%.3f)" % (self.x, self.y)
 
     def __eq__(self, other):
         return self.loc == other.loc
@@ -137,12 +137,12 @@ class MyEdge(object):
     def __hash__(self):
         return hash(self.nodes)
 
-    def geoJSON(self):
+    def geoJSON(self,rezero):
         return {
                    "type": "Feature",
                    "geometry": {
                        "type": "LineString",
-                       "coordinates": [list([n.x, n.y]) for n in self.nodes]
+                       "coordinates": [list([n.x+rezero[0], n.y+rezero[1]]) for n in self.nodes]
                    },
                    "properties": {
                        "road": str(self.road).lower(),
@@ -238,6 +238,7 @@ class MyGraph(object):
         self.name = name
         self.cleaned = False
         self.roads_update = True
+        self.rezero_vector = np.array([0,0])
 
         if G is None:
             self.G = nx.Graph()
@@ -283,6 +284,7 @@ class MyGraph(object):
         nx_copy = self.G.copy()
         copy = MyGraph(nx_copy)
         copy.name = self.name
+        copy.rezero_vector = self.rezero_vector
 
         # outerface is a side effect of the creation of inner_facelist
         # so we operate on that in order to not CALL inner_facelist for every
@@ -310,7 +312,7 @@ class MyGraph(object):
 
     def myedges_geoJSON(self):
         return json.dumps({"type": "FeatureCollection",
-                           "features": [e.geoJSON() for e in self.myedges()]})
+                           "features": [e.geoJSON(self.rezero_vector) for e in self.myedges()]})
 
 
 ############################
@@ -1066,40 +1068,6 @@ class MyGraph(object):
         plt.axes().set_aspect(aspect=1)
         plt.axis('off')
 
-    def myGraph_to_plotly_traces(self):
-        """myGraph to plotly trace   """
-
-        # add the edges as disconnected lines in a trace
-        edge_trace = Scatter(x=[], y=[], mode='lines',
-                             name='Parcel Boundaries',
-                             line=Line(color='grey', width=0.5))
-        road_trace = Scatter(x=[], y=[], mode='lines',
-                             name='Road Boundaries',
-                             line=Line(color='black', width=2))
-        interior_trace = Scatter(x=[], y=[], mode='lines',
-                                 name='Interior Parcels',
-                                 line=Line(color='red', width=2.5))
-        barrier_trace = Scatter(x=[], y=[], mode='lines',
-                                name='Barriers',
-                                line=Line(color='green', width=0.75))
-
-        for i in self.connected_components():
-            for edge in i.myedges():
-                x0, y0 = edge.nodes[0].loc
-                x1, y1 = edge.nodes[1].loc
-                edge_trace['x'] += [x0, x1, None]
-                edge_trace['y'] += [y0, y1, None]
-                if edge.road:
-                    road_trace['x'] += [x0, x1, None]
-                    road_trace['y'] += [y0, y1, None]
-                if edge.interior:
-                    interior_trace['x'] += [x0, x1, None]
-                    interior_trace['y'] += [y0, y1, None]
-                if edge.barrier:
-                    barrier_trace['x'] += [x0, x1, None]
-                    barrier_trace['y'] += [y0, y1, None]
-
-        return edge_trace, road_trace, interior_trace, barrier_trace
 
 
 if __name__ == "__main__":
