@@ -947,12 +947,7 @@ class MyGraph(object):
                    title="", new_plot=True, new_road_color="blue",
                    new_road_width=4, old_node_size=25, old_road_width=6,
                    barriers=True, base_width=1):
-        if new_plot:
-            plt.figure()
 
-        plt.axes().set_aspect(aspect=1)
-        plt.axis('off')
-        plt.title(title)
         nlocs = self.location_dict()
 
         if update:
@@ -979,12 +974,6 @@ class MyGraph(object):
         nx.draw_networkx_edges(interior_graph.G, pos=nlocs, with_labels=False,
                                edge_color='red', node_color='red',
                                node_size=50, width=new_road_width)
-
-        if parcel_labels is True:
-            for i in range(0, len(self.inner_facelist)):
-                plt.text(self.inner_facelist[i].centroid.x,
-                         self.inner_facelist[i].centroid.y,
-                         str(i), withdash=True)
 
         # plotting original road outline:
 
