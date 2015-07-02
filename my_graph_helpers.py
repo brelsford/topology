@@ -222,7 +222,7 @@ def form_equivalence_classes(myG, duals=None, verbose=False):
     result[depth] = [f for f in myG.inner_facelist if f.odd_node[depth]]
 
     if verbose:
-        print("Graph S{} has {} parcels".format(depth, len(result[depth])))
+        pass#print("Graph S{} has {} parcels".format(depth, len(result[depth])))
 
     depth += 1
 
@@ -233,8 +233,8 @@ def form_equivalence_classes(myG, duals=None, verbose=False):
         duals, depth, result = myG.formClass(duals, depth, result)
         if verbose:
             md = max(result.keys())
-            print("Graph S{} has {} parcels".format(md, len(result[md])))
-            print("current depth {} just finished".format(depth))
+            #print("Graph S{} has {} parcels".format(md, len(result[md])))
+            #print("current depth {} just finished".format(depth))
             # test_interior_is_inner(myG)
 
     return result, depth
@@ -348,7 +348,7 @@ def find_short_paths(myA, parcel, barriers=True, shortest_only=False):
 
     rb = [n for n in parcel.nodes+parcel.edges if n.road]
     if len(rb) > 0:
-        raise AssertionError("parcel {} is on a road".format(parcel))
+        raise AssertionError("parcel %s is on a road") %(str(parcel))
 
     if barriers:
         barrier_edges = [e for e in myA.myedges() if e.barrier]
@@ -408,7 +408,7 @@ def find_short_paths_all_parcels(myA, flist=None, full_path=None,
 
             rb = [n for n in parcel.nodes+parcel.edges if n.road]
             if len(rb) > 0:
-                raise AssertionError("parcel {} is on a road".format(parcel))
+                raise AssertionError("parcel %s is on a road" %(parcel))
 
             needs_update = False
             for pathitem in parcel.paths.items():
@@ -437,7 +437,7 @@ def find_short_paths_all_parcels(myA, flist=None, full_path=None,
             counter += 1
             all_paths.update(paths)
     if quiet is False:
-        print("Shortest paths found for {} parcels".format(counter))
+        pass#print("Shortest paths found for {} parcels".format(counter))
 
     return all_paths
 
@@ -518,7 +518,7 @@ def build_all_roads(myG, master=None, alpha=2, plot_intermediate=False,
 
     target_mypath = None
     if vquiet is False:
-        print("Begin w {} Interior Parcels".format(len(myG.interior_parcels)))
+        pass #print("Begin w {} Interior Parcels".format(len(myG.interior_parcels)))
 
     md = 100
 
@@ -545,9 +545,7 @@ def build_all_roads(myG, master=None, alpha=2, plot_intermediate=False,
                 flist = list(set(result[3]) - set(result.get(5, [])))
 
         if quiet is False:
-            print("Cur max depth is {}; {}".format(md, len(flist)) +
-                  " parcels at current depth. \n" +
-                  "{0:.1f} new roads so far".format(added_road_length))
+            pass 
 
         # potential segments from parcels in flist
 
@@ -576,7 +574,7 @@ def build_all_roads(myG, master=None, alpha=2, plot_intermediate=False,
 
         remain = len(myG.interior_parcels)
         if quiet is False:
-            print("\n{} interior parcels left".format(remain))
+            pass #print("\n{} interior parcels left".format(remain))
         if vquiet is False:
             if remain > 300 or remain in [50, 100, 150, 200, 225, 250, 275]:
                 pass
@@ -1005,7 +1003,7 @@ def test_interior_is_inner(myG):
     in0 = myG.interior_parcels[0]
     ans = in0 in myG.inner_facelist
 
-    print("interior in inner_facelist is {}".format(ans))
+    #print("interior in inner_facelist is {}".format(ans))
 
 
 def testGraph():

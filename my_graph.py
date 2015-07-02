@@ -963,18 +963,6 @@ class MyGraph(object):
         # node_sizes = [30 if n.road else 1 for n in self.G.nodes()]
         interior_graph = mgh.graphFromMyFaces(self.interior_parcels)
 
-        # nx.draw_networkx(self.G,pos = nlocs, with_labels = False,
-        #                  node_size = node_sizes, node_color= node_colors,
-        #                  edge_color = edge_colors, width = edge_width)
-
-        nx.draw_networkx_edges(self.G, pos=nlocs, with_labels=False,
-                               node_size=1, node_color=node_colors,
-                               edge_color=edge_colors, width=edge_width)
-
-        nx.draw_networkx_edges(interior_graph.G, pos=nlocs, with_labels=False,
-                               edge_color='red', node_color='red',
-                               node_size=50, width=new_road_width)
-
         # plotting original road outline:
 
         if master:
@@ -986,16 +974,11 @@ class MyGraph(object):
             for e in eoffroad:
                 copy.G.remove_edge(e.nodes[0], e.nodes[1])
 
-            nx.draw_networkx(copy.G, pos=nlocs, with_labels=False,
-                             node_size=old_node_size, node_color='black',
-                             edge_color='black', width=old_road_width)
 
         if barriers:
             barrier_edges = [e for e in self.myedges() if e.barrier]
             if len(barrier_edges) > 0:
                 barGraph = mgh.graphFromMyEdges(barrier_edges)
-                barGraph.plot(node_size=25, node_color='green', width=4,
-                              edge_color='green')
 
     def plot_all_paths(self, all_paths, update=False):
         """ plots the shortest paths from all interior parcels to the road.
