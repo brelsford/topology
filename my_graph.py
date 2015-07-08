@@ -137,16 +137,18 @@ class MyEdge(object):
     def __hash__(self):
         return hash(self.nodes)
 
-    def geoJSON(self,rezero):
+    def geoJSON(self, rezero):
         return {
                    "type": "Feature",
                    "geometry": {
                        "type": "LineString",
-                       "coordinates": [list([n.x+rezero[0], n.y+rezero[1]]) for n in self.nodes]
+                       "coordinates": [list([n.x+rezero[0], n.y+rezero[1]])
+                                       for n in self.nodes]
                    },
                    "properties": {
                        "road": str(self.road).lower(),
-                       "interior": str(self.interior).lower()
+                       "interior": str(self.interior).lower(),
+                       "barrier": str(self.barrier).lower()
                    }
                }
 
@@ -238,7 +240,7 @@ class MyGraph(object):
         self.name = name
         self.cleaned = False
         self.roads_update = True
-        self.rezero_vector = np.array([0,0])
+        self.rezero_vector = np.array([0, 0])
 
         if G is None:
             self.G = nx.Graph()
@@ -312,8 +314,8 @@ class MyGraph(object):
 
     def myedges_geoJSON(self):
         return json.dumps({"type": "FeatureCollection",
-                           "features": [e.geoJSON(self.rezero_vector) for e in self.myedges()]})
-
+                           "features": [e.geoJSON(self.rezero_vector)
+                                        for e in self.myedges()]})
 
 ############################
 # GEOMETRY CLEAN UP FUNCTIONS
@@ -947,12 +949,7 @@ class MyGraph(object):
                    title="", new_plot=True, new_road_color="blue",
                    new_road_width=4, old_node_size=25, old_road_width=6,
                    barriers=True, base_width=1):
-        if new_plot:
-            plt.figure()
 
-        plt.axes().set_aspect(aspect=1)
-        plt.axis('off')
-        plt.title(title)
         nlocs = self.location_dict()
 
         if update:
@@ -968,24 +965,6 @@ class MyGraph(object):
         # node_sizes = [30 if n.road else 1 for n in self.G.nodes()]
         interior_graph = mgh.graphFromMyFaces(self.interior_parcels)
 
-        # nx.draw_networkx(self.G,pos = nlocs, with_labels = False,
-        #                  node_size = node_sizes, node_color= node_colors,
-        #                  edge_color = edge_colors, width = edge_width)
-
-        nx.draw_networkx_edges(self.G, pos=nlocs, with_labels=False,
-                               node_size=1, node_color=node_colors,
-                               edge_color=edge_colors, width=edge_width)
-
-        nx.draw_networkx_edges(interior_graph.G, pos=nlocs, with_labels=False,
-                               edge_color='red', node_color='red',
-                               node_size=50, width=new_road_width)
-
-        if parcel_labels is True:
-            for i in range(0, len(self.inner_facelist)):
-                plt.text(self.inner_facelist[i].centroid.x,
-                         self.inner_facelist[i].centroid.y,
-                         str(i), withdash=True)
-
         # plotting original road outline:
 
         if master:
@@ -997,16 +976,11 @@ class MyGraph(object):
             for e in eoffroad:
                 copy.G.remove_edge(e.nodes[0], e.nodes[1])
 
-            nx.draw_networkx(copy.G, pos=nlocs, with_labels=False,
-                             node_size=old_node_size, node_color='black',
-                             edge_color='black', width=old_road_width)
 
         if barriers:
             barrier_edges = [e for e in self.myedges() if e.barrier]
             if len(barrier_edges) > 0:
                 barGraph = mgh.graphFromMyEdges(barrier_edges)
-                barGraph.plot(node_size=25, node_color='green', width=4,
-                              edge_color='green')
 
     def plot_all_paths(self, all_paths, update=False):
         """ plots the shortest paths from all interior parcels to the road.
@@ -1068,7 +1042,10 @@ class MyGraph(object):
         plt.axes().set_aspect(aspect=1)
         plt.axis('off')
 
+<<<<<<< HEAD
+=======
 
+>>>>>>> pr/13
 
 if __name__ == "__main__":
     master = mgh.testGraphLattice(4)

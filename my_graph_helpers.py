@@ -9,8 +9,11 @@ import itertools
 import operator
 import matplotlib.colors as mcolors
 from scipy.cluster.hierarchy import linkage, dendrogram
-#import plotly.plotly as py
-#from plotly.graph_objs import *
+import json
+
+# import plotly.plotly as ply
+# from plotly.graph_objs import *
+
 
 import my_graph as mg
 
@@ -222,7 +225,8 @@ def form_equivalence_classes(myG, duals=None, verbose=False):
     result[depth] = [f for f in myG.inner_facelist if f.odd_node[depth]]
 
     if verbose:
-        print("Graph S{} has {} parcels".format(depth, len(result[depth])))
+        # print("Graph S{} has {} parcels".format(depth, len(result[depth])))
+        pass
 
     depth += 1
 
@@ -232,10 +236,11 @@ def form_equivalence_classes(myG, duals=None, verbose=False):
     while depth < len(duals):
         duals, depth, result = myG.formClass(duals, depth, result)
         if verbose:
-            md = max(result.keys())
-            print("Graph S{} has {} parcels".format(md, len(result[md])))
-            print("current depth {} just finished".format(depth))
+            # md = max(result.keys())
+            # print("Graph S{} has {} parcels".format(md, len(result[md])))
+            # print("current depth {} just finished".format(depth))
             # test_interior_is_inner(myG)
+            pass
 
     return result, depth
 
@@ -348,7 +353,7 @@ def find_short_paths(myA, parcel, barriers=True, shortest_only=False):
 
     rb = [n for n in parcel.nodes+parcel.edges if n.road]
     if len(rb) > 0:
-        raise AssertionError("parcel {} is on a road".format(parcel))
+        raise AssertionError("parcel %s is on a road") % (str(parcel))
 
     if barriers:
         barrier_edges = [e for e in myA.myedges() if e.barrier]
@@ -367,7 +372,7 @@ def find_short_paths(myA, parcel, barriers=True, shortest_only=False):
         all_simple = [shorten_path(p[1:-1]) for p in nx.all_simple_paths(myA.G,
                       road, interior, cutoff=shortest_path_segments + 2)]
         paths = dict((tuple(p), path_length(p)) for p in all_simple
-                 if path_length(p) < shortest_path_distance*2)
+                     if path_length(p) < shortest_path_distance*2)
     if shortest_only is True:
         p = shorten_path(shortest_path[1:-1])
         paths = {tuple(p): path_length(p)}
@@ -408,7 +413,7 @@ def find_short_paths_all_parcels(myA, flist=None, full_path=None,
 
             rb = [n for n in parcel.nodes+parcel.edges if n.road]
             if len(rb) > 0:
-                raise AssertionError("parcel {} is on a road".format(parcel))
+                raise AssertionError("parcel %s is on a road" % (parcel))
 
             needs_update = False
             for pathitem in parcel.paths.items():
@@ -437,7 +442,8 @@ def find_short_paths_all_parcels(myA, flist=None, full_path=None,
             counter += 1
             all_paths.update(paths)
     if quiet is False:
-        print("Shortest paths found for {} parcels".format(counter))
+        pass
+        # print("Shortest paths found for {} parcels".format(counter))
 
     return all_paths
 
@@ -518,7 +524,8 @@ def build_all_roads(myG, master=None, alpha=2, plot_intermediate=False,
 
     target_mypath = None
     if vquiet is False:
-        print("Begin w {} Interior Parcels".format(len(myG.interior_parcels)))
+        pass
+        # print("Begin w {} Int Parcels".format(len(myG.interior_parcels)))
 
     md = 100
 
@@ -545,9 +552,7 @@ def build_all_roads(myG, master=None, alpha=2, plot_intermediate=False,
                 flist = list(set(result[3]) - set(result.get(5, [])))
 
         if quiet is False:
-            print("Cur max depth is {}; {}".format(md, len(flist)) +
-                  " parcels at current depth. \n" +
-                  "{0:.1f} new roads so far".format(added_road_length))
+            pass
 
         # potential segments from parcels in flist
 
@@ -576,7 +581,8 @@ def build_all_roads(myG, master=None, alpha=2, plot_intermediate=False,
 
         remain = len(myG.interior_parcels)
         if quiet is False:
-            print("\n{} interior parcels left".format(remain))
+            pass
+            #  print("\n{} interior parcels left".format(remain))
         if vquiet is False:
             if remain > 300 or remain in [50, 100, 150, 200, 225, 250, 275]:
                 pass
@@ -768,6 +774,61 @@ def graphFromShapes(shapes, name, rezero=np.array([0, 0])):
     return myG
 
 
+def is_roadnode(node, graph):
+    """defines a node as a road node if any connected edges are road edges.
+    returns true or false and updates the properties of the node. """
+    graph.G[node].keys()
+    for k in graph.G[node].keys():
+        edge = graph.G[node][k]['myedge']
+        if edge.road is True:
+            node.road = True
+            return node.road
+    return node.road
+
+
+def graphFromJSON(jsonobj):
+    """returns a new mygraph from a json object.  calculates interior node
+    and graph properties from the properties of the edges.
+    """
+
+    edgelist = []
+    # read all the edges from json
+    for feature in jsonobj['features']:
+        # check that there are exactly 2 nodes
+        numnodes = len(feature['geometry']['coordinates'])
+        if numnodes != 2:
+            raise AssertionError("JSON line feature has {} "
+                                 "coordinates instead of 2".format(numnodes))
+
+        c0 = feature['geometry']['coordinates'][0]
+        c1 = feature['geometry']['coordinates'][1]
+
+        isinterior = feature['properties']['interior']
+        isroad = feature['properties']['road']
+        isbarrier = feature['properties']['barrier']
+
+        n0 = mg.MyNode(c0)
+        n1 = mg.MyNode(c1)
+
+        edge = mg.MyEdge((n0, n1))
+        edge.road = json.loads(isroad)
+        edge.interior = json.loads(isinterior)
+        edge.barrier = json.loads(isbarrier)
+        edgelist.append(edge)
+
+    # create a new graph from the edge list, and calculate
+    # necessary graph properties from the road
+    new = graphFromMyEdges(edgelist)
+    new.road_edges = [e for e in new.myedges() if e.road]
+    new.road_nodes = [n for n in new.G.nodes() if is_roadnode(n, new)]
+
+    # defines all the faces in the graph
+    new.inner_facelist
+    # defines all the faces with no road nodes in the graph as interior parcels
+    new.define_interior_parcels()
+
+    return new, edgelist
+
 ####################
 # PLOTTING FUNCTIONS
 ####################
@@ -844,60 +905,65 @@ def make_colormap(seq):
     return mcolors.LinearSegmentedColormap('CustomMap', cdict)
 
 
-
-def plotly_traces(myG):
-    """myGraph to plotly trace   """
-
-    # add the edges as disconnected lines in a trace
-    edge_trace = Scatter(x=[], y=[], mode='lines',
-                         name='Parcel Boundaries',
-                         line=Line(color='grey', width=0.5))
-    road_trace = Scatter(x=[], y=[], mode='lines',
-                         name='Road Boundaries',
-                         line=Line(color='black', width=2))
-    interior_trace = Scatter(x=[], y=[], mode='lines',
-                             name='Interior Parcels',
-                             line=Line(color='red', width=2.5))
-    barrier_trace = Scatter(x=[], y=[], mode='lines',
-                            name='Barriers',
-                            line=Line(color='green', width=0.75))
-
-    for i in myG.connected_components():
-        for edge in i.myedges():
-            x0, y0 = edge.nodes[0].loc
-            x1, y1 = edge.nodes[1].loc
-            edge_trace['x'] += [x0, x1, None]
-            edge_trace['y'] += [y0, y1, None]
-            if edge.road:
-                road_trace['x'] += [x0, x1, None]
-                road_trace['y'] += [y0, y1, None]
-            if edge.interior:
-                interior_trace['x'] += [x0, x1, None]
-                interior_trace['y'] += [y0, y1, None]
-            if edge.barrier:
-                barrier_trace['x'] += [x0, x1, None]
-                barrier_trace['y'] += [y0, y1, None]
-
-    return [edge_trace, road_trace, interior_trace, barrier_trace]
-
-
-def plotly_graph(traces, filename=None, title=None):
-    """ use py.iplot(fig,filename) after this function in ipython notrbook to
-    show the resulting plotly figure inline, or url=py.plot(fig,filename) to 
-    just get url of resulting fig and not plot inline. """
-
-    if filename is None:
-        filename = "plotly_graph"
-    fig = Figure(data=Data(traces),
-                 layout=Layout(title=title, plot_bgcolor="rgb(217, 217, 217)",
-                               showlegend=True,
-                               xaxis=XAxis(showgrid=False, zeroline=False,
-                                           showticklabels=False),
-                               yaxis=YAxis(showgrid=False, zeroline=False,
-                                           showticklabels=False)))
-    #py.iplot(fig, filename=filename)
-    return fig, filename
-
+# ==============================================================================
+# def plotly_traces(myG):
+#     """myGraph to plotly trace   """
+#
+#     # add the edges as disconnected lines in a trace
+#     edge_trace = Scatter(x=[], y=[], mode='lines',
+#                          name='Parcel Boundaries',
+#                          line=Line(color='grey', width=0.5))
+#     road_trace = Scatter(x=[], y=[], mode='lines',
+#                          name='Road Boundaries',
+#                          line=Line(color='black', width=2))
+#     interior_trace = Scatter(x=[], y=[], mode='lines',
+#                              name='Interior Parcels',
+#                              line=Line(color='red', width=2.5))
+#     barrier_trace = Scatter(x=[], y=[], mode='lines',
+#                             name='Barriers',
+#                             line=Line(color='green', width=0.75))
+#
+#     for i in myG.connected_components():
+#         for edge in i.myedges():
+#             x0, y0 = edge.nodes[0].loc
+#             x1, y1 = edge.nodes[1].loc
+#             edge_trace['x'] += [x0, x1, None]
+#             edge_trace['y'] += [y0, y1, None]
+#             if edge.road:
+#                 road_trace['x'] += [x0, x1, None]
+#                 road_trace['y'] += [y0, y1, None]
+#             if edge.interior:
+#                 interior_trace['x'] += [x0, x1, None]
+#                 interior_trace['y'] += [y0, y1, None]
+#             if edge.barrier:
+#                 barrier_trace['x'] += [x0, x1, None]
+#                 barrier_trace['y'] += [y0, y1, None]
+#
+#     return [edge_trace, road_trace, interior_trace, barrier_trace]
+#
+#
+# def plotly_graph(traces, filename=None, title=None):
+#
+#     """ use ply.iplot(fig,filename) after this function in ipython notebok to
+#     show the resulting plotly figure inline, or url=ply.plot(fig,filename) to
+#     just get url of resulting fig and not plot inline. """
+#
+#     if filename is None:
+#         filename = "plotly_graph"
+#     fig = Figure(data=Data(traces),
+#                  layout=Layout(title=title, plot_bgcolor="rgb(217,217,217)",
+#                                showlegend=True,
+#                                xaxis=XAxis(showgrid=False, zeroline=False,
+#                                            showticklabels=False),
+#                                yaxis=YAxis(showgrid=False, zeroline=False,
+#                                            showticklabels=False)))
+#
+#     # ply.iplot(fig, filename=filename)
+#     # py.iplot(fig, filename=filename)
+#
+#     return fig, filename
+#
+# ==============================================================================
 
 ######################
 #  IMPORT & Running FUNCTIONS #
@@ -1005,7 +1071,9 @@ def test_interior_is_inner(myG):
     in0 = myG.interior_parcels[0]
     ans = in0 in myG.inner_facelist
 
-    print("interior in inner_facelist is {}".format(ans))
+    # print("interior in inner_facelist is {}".format(ans))
+
+    return ans
 
 
 def testGraph():
@@ -1112,6 +1180,7 @@ def json_test(test_geojson):
     good_geojson = '{"type": "Point", "coordinates": [-100, 80]}'
     good_request = requests.post(validate_endpoint, data=good_geojson)
     test_request = requests.post(validate_endpoint, data=test_geojson)
+
     print("hard coded good geoJSON:")
     print(good_request.json())
     print("status for test geojson:")
