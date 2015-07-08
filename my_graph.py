@@ -137,16 +137,18 @@ class MyEdge(object):
     def __hash__(self):
         return hash(self.nodes)
 
-    def geoJSON(self,rezero):
+    def geoJSON(self, rezero):
         return {
                    "type": "Feature",
                    "geometry": {
                        "type": "LineString",
-                       "coordinates": [list([n.x+rezero[0], n.y+rezero[1]]) for n in self.nodes]
+                       "coordinates": [list([n.x+rezero[0], n.y+rezero[1]])
+                                       for n in self.nodes]
                    },
                    "properties": {
                        "road": str(self.road).lower(),
-                       "interior": str(self.interior).lower()
+                       "interior": str(self.interior).lower(),
+                       "barrier": str(self.barrier).lower()
                    }
                }
 
@@ -238,7 +240,7 @@ class MyGraph(object):
         self.name = name
         self.cleaned = False
         self.roads_update = True
-        self.rezero_vector = np.array([0,0])
+        self.rezero_vector = np.array([0, 0])
 
         if G is None:
             self.G = nx.Graph()
@@ -312,8 +314,8 @@ class MyGraph(object):
 
     def myedges_geoJSON(self):
         return json.dumps({"type": "FeatureCollection",
-                           "features": [e.geoJSON(self.rezero_vector) for e in self.myedges()]})
-
+                           "features": [e.geoJSON(self.rezero_vector)
+                                        for e in self.myedges()]})
 
 ############################
 # GEOMETRY CLEAN UP FUNCTIONS
@@ -1067,7 +1069,6 @@ class MyGraph(object):
 
         plt.axes().set_aspect(aspect=1)
         plt.axis('off')
-
 
 
 if __name__ == "__main__":

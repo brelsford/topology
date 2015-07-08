@@ -51,6 +51,8 @@ def run_once(blocklist):
     plt.figure()
 
     for original in blocklist:
+        original.define_roads()
+        original.define_interior_parcels()
         if len(original.interior_parcels) > 0:
             block = original.copy()
 
@@ -71,17 +73,24 @@ def run_once(blocklist):
 if __name__ == "__main__":
 
     # SINGLE SMALL BLOCK
-    filename = "data/epworth_demo"
-    name = "ep single"
-    byblock = True
-    threshold = 0.5
+    # filename = "data/epworth_demo"
+    # name = "ep single"
+    # byblock = True
+    # threshold = 0.5
 
-    # MANY SMALL BLOCKS
+    # MANY SMALL BLOCKS, epworth
     # some of the blocks here require a threshold of 0.5
     # filename = "data/epworth_before"
     # name = "ep many"
     # byblock = True
     # threshold = 0.5
+
+    # MANY SMALL BLOCKS, Phule Nagar
+    # some of the blocks here require a threshold of 0.5
+    filename = "data/phule_nagar_v6"
+    name = "phule"
+    byblock = False
+    threshold = 0.5
 
     # ONE LARGE BLOCK
     # filename = "data/capetown"

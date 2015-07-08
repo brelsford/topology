@@ -9,7 +9,7 @@ import itertools
 import operator
 import matplotlib.colors as mcolors
 from scipy.cluster.hierarchy import linkage, dendrogram
-import plotly.plotly as py
+import plotly.plotly as ply
 from plotly.graph_objs import *
 
 import my_graph as mg
@@ -768,6 +768,61 @@ def graphFromShapes(shapes, name, rezero=np.array([0, 0])):
     return myG
 
 
+def is_roadnode(node, graph):
+    """defines a node as a road node if any connected edges are road edges.
+    returns true or false and updates the properties of the node. """
+    graph.G[node].keys()
+    for k in graph.G[node].keys():
+        edge = graph.G[node][k]['myedge']
+        if edge.road is True:
+            node.road = True
+            return node.road
+    return node.road
+
+
+def graphFromJSON(jsonobj):
+    """returns a new mygraph from a json object.  calculates interior node
+    and graph properties from the properties of the edges.
+    """
+
+    edgelist = []
+    # read all the edges from json
+    for feature in jsonobj['features']:
+        # check that there are exactly 2 nodes
+        numnodes = len(feature['geometry']['coordinates'])
+        if numnodes != 2:
+            print ("JSON line feature has {} "
+                   "coordinates instead of 2".format(numnodes))
+
+        c0 = feature['geometry']['coordinates'][0]
+        c1 = feature['geometry']['coordinates'][1]
+
+        isinterior = feature['properties']['interior']
+        isroad = feature['properties']['road']
+        isbarrier = feature['properties']['barrier']
+
+        n0 = mg.MyNode(c0)
+        n1 = mg.MyNode(c1)
+
+        edge = mg.MyEdge((n0, n1))
+        edge.road = json.loads(isroad)
+        edge.interior = json.loads(isinterior)
+        edge.barrier = json.loads(isbarrier)
+        edgelist.append(edge)
+
+    # create a new graph from the edge list, and calculate
+    # necessary graph properties from the road
+    new = mgh.graphFromMyEdges(edgelist)
+    new.road_edges = [e for e in new.myedges() if e.road]
+    new.road_nodes = [n for n in new.G.nodes() if is_roadnode(n, new)]
+
+    # defines all the faces in the graph
+    new.inner_facelist
+    # defines all the faces with no road nodes in the graph as interior parcels
+    new.define_interior_parcels()
+
+    return new, edgelist
+
 ####################
 # PLOTTING FUNCTIONS
 ####################
@@ -844,7 +899,6 @@ def make_colormap(seq):
     return mcolors.LinearSegmentedColormap('CustomMap', cdict)
 
 
-
 def plotly_traces(myG):
     """myGraph to plotly trace   """
 
@@ -882,8 +936,8 @@ def plotly_traces(myG):
 
 
 def plotly_graph(traces, filename=None, title=None):
-    """ use py.iplot(fig,filename) after this function in ipython notrbook to
-    show the resulting plotly figure inline, or url=py.plot(fig,filename) to 
+    """ use ply.iplot(fig,filename) after this function in ipython notrbook to
+    show the resulting plotly figure inline, or url=ply.plot(fig,filename) to
     just get url of resulting fig and not plot inline. """
 
     if filename is None:
@@ -895,7 +949,7 @@ def plotly_graph(traces, filename=None, title=None):
                                            showticklabels=False),
                                yaxis=YAxis(showgrid=False, zeroline=False,
                                            showticklabels=False)))
-    #py.iplot(fig, filename=filename)
+    # ply.iplot(fig, filename=filename)
     return fig, filename
 
 
