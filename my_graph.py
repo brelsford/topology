@@ -82,14 +82,15 @@ class MyNode(object):
         self.y = np.round(float(y), significant_figs)
         self.loc = (self.x, self.y)
         self.road = False
-        self.on_interior = False
+        self.interior = False
+        self.barrier = False
         self.name = name
 
     def __repr__(self):
         if self.name:
             return self.name
         else:
-            return "(%.3f,%.3f)" % (self.x, self.y)
+            return "(%.2f,%.2f)" % (self.x, self.y)
 
     def __eq__(self, other):
         return self.loc == other.loc
@@ -708,33 +709,44 @@ class MyGraph(object):
         if self.G.number_of_nodes() < 2:
             return []
 
-        interior_nodes = []
         interior_parcels = []
+
+        for n in self.G.nodes():
+            mgh.is_roadnode(n, self)
+
+        self.road_nodes = [n for n in self.G.nodes() if n.road]
+
+        # rewrites all edge properties as not being interior.This needs
+        # to happen BEFORE we define the edge properties for parcels
+        # that are interior, in order to give that priority.
+        for e in self.myedges():
+            e.interior = False
 
         for f in self.inner_facelist:
             if len(set(f.nodes).intersection(set(self.road_nodes))) == 0:
                 f.on_road = False
                 interior_parcels.append(f)
-                for n in f.nodes:
-                    n.on_interior = True
-                    interior_nodes.append(n)
-                # rewrites all edge properties as not being interior.This needs
-                # to happen BEFORE we define the edge properties for parcels
-                # that are interior, in order to give that priority.
-                for e in f.edges:
-                    e.interior = False
             else:
                 f.on_road = True
                 for n in f.nodes:
-                    n.on_interior = False
+                    n.interior = False
 
         for p in interior_parcels:
             for e in p.edges:
                 e.interior = True
 
+        for n in self.G.nodes():
+            mgh.is_interiornode(n, self)
+
         self.interior_parcels = interior_parcels
-        self.interior_nodes = interior_nodes
+        self.interior_nodes = [n for n in self.G.nodes() if n.interior]
         # print "define interior parcels called"
+
+    def update_node_properties(self):
+        for n in self.G.nodes():
+            mgh.is_roadnode(n, self)
+            mgh.is_interiornode(n, self)
+            mgh.is_barriernode(n, self)
 
     def find_interior_edges(self):
         """ finds and returns the pairs of nodes (not the myEdge) for all edges that
@@ -956,17 +968,35 @@ class MyGraph(object):
             self.define_roads()
             self.define_interior_parcels()
 
-        edge_colors = [new_road_color if e.road else 'black'
-                       for e in self.myedges()]
-        edge_width = [new_road_width if e.road else base_width
-                      for e in self.myedges()]
-        # node_colors=['black' if n.road else 'black' for n in self.G.nodes()]
-        node_colors = 'black'
-        # node_sizes = [30 if n.road else 1 for n in self.G.nodes()]
-        interior_graph = mgh.graphFromMyFaces(self.interior_parcels)
+        if new_plot:
+            plt.figure()
 
-        # plotting original road outline:
+        edge_colors = ['blue' if e.road
+                       else 'green' if e.barrier
+                       else 'red' if e.interior
+                       else 'black' for e in self.myedges()]
 
+        edge_width = [new_road_width if e.road
+                      else 0.7*new_road_width if e.barrier
+                      else 0.7*new_road_width if e.interior
+                      else 1 for e in self.myedges()]
+
+        node_colors = ['blue' if n.road
+                       else 'green' if e.barrier
+                       else 'red' if n.interior
+                       else 'black' for n in self.G.nodes()]
+
+        node_sizes = [new_road_width**1.8 if n.road
+                      else new_road_width**1.4 if n.barrier
+                      else new_road_width**1.4 if n.interior
+                      else 0.5 for n in self.G.nodes()]
+
+        # plot current graph
+        nx.draw_networkx(self.G, pos=nlocs, with_labels=False,
+                         node_size=node_sizes, node_color=node_colors,
+                         edge_color=edge_colors, width=edge_width)
+
+        # plot original roads
         if master:
             copy = master.copy()
             noffroad = [n for n in copy.G.nodes() if not n.road]
@@ -976,11 +1006,9 @@ class MyGraph(object):
             for e in eoffroad:
                 copy.G.remove_edge(e.nodes[0], e.nodes[1])
 
-
-        if barriers:
-            barrier_edges = [e for e in self.myedges() if e.barrier]
-            if len(barrier_edges) > 0:
-                barGraph = mgh.graphFromMyEdges(barrier_edges)
+            nx.draw_networkx(copy.G, pos=nlocs, with_labels=False,
+                             node_size=old_node_size, node_color='black',
+                             edge_color='black', width=old_road_width)
 
     def plot_all_paths(self, all_paths, update=False):
         """ plots the shortest paths from all interior parcels to the road.
@@ -1042,10 +1070,6 @@ class MyGraph(object):
         plt.axes().set_aspect(aspect=1)
         plt.axis('off')
 
-<<<<<<< HEAD
-=======
-
->>>>>>> pr/13
 
 if __name__ == "__main__":
     master = mgh.testGraphLattice(4)

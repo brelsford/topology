@@ -495,7 +495,7 @@ def choose_path(myG, paths, alpha, strict_greedy=False):
 
 
 def build_all_roads(myG, master=None, alpha=2, plot_intermediate=False,
-                    wholepath=False, original_roads=None, plot_original=False,
+                    wholepath=True, original_roads=None, plot_original=False,
                     bisect=False, plot_result=False, barriers=False,
                     quiet=False, vquiet=False, strict_greedy=False,
                     outsidein=False):
@@ -778,12 +778,39 @@ def is_roadnode(node, graph):
     """defines a node as a road node if any connected edges are road edges.
     returns true or false and updates the properties of the node. """
     graph.G[node].keys()
+    node.road = False
     for k in graph.G[node].keys():
         edge = graph.G[node][k]['myedge']
         if edge.road is True:
             node.road = True
             return node.road
     return node.road
+
+
+def is_interiornode(node, graph):
+    """defines a node as an interior node if any connected edges are interior
+    edges. returns true or false and updates the properties of the node. """
+    graph.G[node].keys()
+    node.interior = False
+    for k in graph.G[node].keys():
+        edge = graph.G[node][k]['myedge']
+        if edge.interior is True:
+            node.interior = True
+            return node.interior
+    return node.interior
+
+
+def is_barriernode(node, graph):
+    """defines a node as a road node if any connected edges are barrier edges.
+    returns true or false and updates the properties of the node. """
+    graph.G[node].keys()
+    node.barrier = False
+    for k in graph.G[node].keys():
+        edge = graph.G[node][k]['myedge']
+        if edge.barrier is True:
+            node.barrier = True
+            return node.barrier
+    return node.barrier
 
 
 def graphFromJSON(jsonobj):
@@ -821,6 +848,8 @@ def graphFromJSON(jsonobj):
     new = graphFromMyEdges(edgelist)
     new.road_edges = [e for e in new.myedges() if e.road]
     new.road_nodes = [n for n in new.G.nodes() if is_roadnode(n, new)]
+    new.interior_nodes = [n for n in new.G.nodes() if is_interiornode(n, new)]
+    new.barrier_nodes = [n for n in new.G.nodes() if is_barriernode(n, new)]
 
     # defines all the faces in the graph
     new.inner_facelist
@@ -1036,6 +1065,15 @@ def rescale_mygraph(myG, rezero=np.array([0, 0]), rescale=np.array([1, 1])):
 
     return scaleG
 
+
+def build_barriers(barriers):
+
+    for b in barriers:
+        b.barrier = True
+        b.road = False
+        for n in b.nodes:
+            n.barrier = True
+            n.road = False
 
 ####################
 # Testing functions
