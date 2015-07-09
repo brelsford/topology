@@ -495,7 +495,7 @@ def choose_path(myG, paths, alpha, strict_greedy=False):
 
 
 def build_all_roads(myG, master=None, alpha=2, plot_intermediate=False,
-                    wholepath=False, original_roads=None, plot_original=False,
+                    wholepath=True, original_roads=None, plot_original=False,
                     bisect=False, plot_result=False, barriers=False,
                     quiet=False, vquiet=False, strict_greedy=False,
                     outsidein=False):
@@ -778,12 +778,39 @@ def is_roadnode(node, graph):
     """defines a node as a road node if any connected edges are road edges.
     returns true or false and updates the properties of the node. """
     graph.G[node].keys()
+    node.road = False
     for k in graph.G[node].keys():
         edge = graph.G[node][k]['myedge']
         if edge.road is True:
             node.road = True
             return node.road
     return node.road
+
+
+def is_interiornode(node, graph):
+    """defines a node as an interior node if any connected edges are interior
+    edges. returns true or false and updates the properties of the node. """
+    graph.G[node].keys()
+    node.interior = False
+    for k in graph.G[node].keys():
+        edge = graph.G[node][k]['myedge']
+        if edge.interior is True:
+            node.interior = True
+            return node.interior
+    return node.interior
+
+
+def is_barriernode(node, graph):
+    """defines a node as a road node if any connected edges are barrier edges.
+    returns true or false and updates the properties of the node. """
+    graph.G[node].keys()
+    node.barrier = False
+    for k in graph.G[node].keys():
+        edge = graph.G[node][k]['myedge']
+        if edge.barrier is True:
+            node.barrier = True
+            return node.barrier
+    return node.barrier
 
 
 def graphFromJSON(jsonobj):
@@ -821,6 +848,8 @@ def graphFromJSON(jsonobj):
     new = graphFromMyEdges(edgelist)
     new.road_edges = [e for e in new.myedges() if e.road]
     new.road_nodes = [n for n in new.G.nodes() if is_roadnode(n, new)]
+    new.interior_nodes = [n for n in new.G.nodes() if is_interiornode(n, new)]
+    new.barrier_nodes = [n for n in new.G.nodes() if is_barriernode(n, new)]
 
     # defines all the faces in the graph
     new.inner_facelist
@@ -834,75 +863,77 @@ def graphFromJSON(jsonobj):
 ####################
 
 
-def plot_cluster_mat(clustering_data, plotting_data, title, dmax,
-                     plot_dendro=True):
-    """from http://nbviewer.ipython.org/github/OxanaSachenkova/
-    hclust-python/blob/master/hclust.ipynb  First input matrix is used to
-    define clustering order, second is the data that is plotted."""
-
-    fig = plt.figure(figsize=(8, 8))
-    # x ywidth height
-
-    ax1 = fig.add_axes([0.05, 0.1, 0.2, 0.6])
-    Y = linkage(clustering_data, method='single')
-    Z1 = dendrogram(Y, orientation='right')  # adding/removing the axes
-    ax1.set_xticks([])
-    # ax1.set_yticks([])
-
-# Compute and plot second dendrogram.
-    ax2 = fig.add_axes([0.3, 0.75, 0.6, 0.1])
-    Z2 = dendrogram(Y)
-    # ax2.set_xticks([])
-    ax2.set_yticks([])
-
-    # set up custom color map
-    c = mcolors.ColorConverter().to_rgb
-    seq = [c('navy'), c('mediumblue'), .1, c('mediumblue'),
-           c('darkcyan'), .2, c('darkcyan'), c('darkgreen'), .3,
-           c('darkgreen'), c('lawngreen'), .4, c('lawngreen'), c('yellow'), .5,
-           c('yellow'), c('orange'), .7, c('orange'), c('red')]
-    custommap = make_colormap(seq)
-
-    # Compute and plot the heatmap
-    axmatrix = fig.add_axes([0.3, 0.1, 0.6, 0.6])
-
-    if not plot_dendro:
-        fig = plt.figure(figsize=(8, 8))
-        axmatrix = fig.add_axes([0.05, 0.1, 0.85, 0.8])
-
-    idx1 = Z1['leaves']
-    D = mat_reorder(plotting_data, idx1)
-    im = axmatrix.matshow(D, aspect='auto', origin='lower', cmap=custommap,
-                          vmin=0, vmax=dmax)
-    axmatrix.set_xticks([])
-    axmatrix.set_yticks([])
-
-    # Plot colorbar.
-    h = 0.6
-    if not plot_dendro:
-        h = 0.8
-    axcolor = fig.add_axes([0.91, 0.1, 0.02, h])
-    plt.colorbar(im, cax=axcolor)
-    ax2.set_title(title)
-    if not plot_dendro:
-        axmatrix.set_title(title)
-
-
-def make_colormap(seq):
-    """Return a LinearSegmentedColormap
-    seq: a sequence of floats and RGB-tuples. The floats should be increasing
-    and in the interval (0,1).
-    """
-    seq = [(None,) * 3, 0.0] + list(seq) + [1.0, (None,) * 3]
-    cdict = {'red': [], 'green': [], 'blue': []}
-    for i, item in enumerate(seq):
-        if isinstance(item, float):
-            r1, g1, b1 = seq[i - 1]
-            r2, g2, b2 = seq[i + 1]
-            cdict['red'].append([item, r1, r2])
-            cdict['green'].append([item, g1, g2])
-            cdict['blue'].append([item, b1, b2])
-    return mcolors.LinearSegmentedColormap('CustomMap', cdict)
+# ==============================================================================
+# def plot_cluster_mat(clustering_data, plotting_data, title, dmax,
+#                      plot_dendro=True):
+#     """from http://nbviewer.ipython.org/github/OxanaSachenkova/
+#     hclust-python/blob/master/hclust.ipynb  First input matrix is used to
+#     define clustering order, second is the data that is plotted."""
+#
+#     fig = plt.figure(figsize=(8, 8))
+#     # x ywidth height
+#
+#     ax1 = fig.add_axes([0.05, 0.1, 0.2, 0.6])
+#     Y = linkage(clustering_data, method='single')
+#     Z1 = dendrogram(Y, orientation='right')  # adding/removing the axes
+#     ax1.set_xticks([])
+#     # ax1.set_yticks([])
+#
+# # Compute and plot second dendrogram.
+#     ax2 = fig.add_axes([0.3, 0.75, 0.6, 0.1])
+#     Z2 = dendrogram(Y)
+#     # ax2.set_xticks([])
+#     ax2.set_yticks([])
+#
+#     # set up custom color map
+#     c = mcolors.ColorConverter().to_rgb
+#     seq = [c('navy'), c('mediumblue'), .1, c('mediumblue'),
+#            c('darkcyan'), .2, c('darkcyan'), c('darkgreen'), .3,
+#            c('darkgreen'), c('lawngreen'), .4,c('lawngreen'),c('yellow'),.5,
+#            c('yellow'), c('orange'), .7, c('orange'), c('red')]
+#     custommap = make_colormap(seq)
+#
+#     # Compute and plot the heatmap
+#     axmatrix = fig.add_axes([0.3, 0.1, 0.6, 0.6])
+#
+#     if not plot_dendro:
+#         fig = plt.figure(figsize=(8, 8))
+#         axmatrix = fig.add_axes([0.05, 0.1, 0.85, 0.8])
+#
+#     idx1 = Z1['leaves']
+#     D = mat_reorder(plotting_data, idx1)
+#     im = axmatrix.matshow(D, aspect='auto', origin='lower', cmap=custommap,
+#                           vmin=0, vmax=dmax)
+#     axmatrix.set_xticks([])
+#     axmatrix.set_yticks([])
+#
+#     # Plot colorbar.
+#     h = 0.6
+#     if not plot_dendro:
+#         h = 0.8
+#     axcolor = fig.add_axes([0.91, 0.1, 0.02, h])
+#     plt.colorbar(im, cax=axcolor)
+#     ax2.set_title(title)
+#     if not plot_dendro:
+#         axmatrix.set_title(title)
+#
+#
+# def make_colormap(seq):
+#     """Return a LinearSegmentedColormap
+#     seq: a sequence of floats and RGB-tuples. The floats should be increasing
+#     and in the interval (0,1).
+#     """
+#     seq = [(None,) * 3, 0.0] + list(seq) + [1.0, (None,) * 3]
+#     cdict = {'red': [], 'green': [], 'blue': []}
+#     for i, item in enumerate(seq):
+#         if isinstance(item, float):
+#             r1, g1, b1 = seq[i - 1]
+#             r2, g2, b2 = seq[i + 1]
+#             cdict['red'].append([item, r1, r2])
+#             cdict['green'].append([item, g1, g2])
+#             cdict['blue'].append([item, b1, b2])
+#     return mcolors.LinearSegmentedColormap('CustomMap', cdict)
+# ==============================================================================
 
 
 # ==============================================================================
@@ -1034,6 +1065,15 @@ def rescale_mygraph(myG, rezero=np.array([0, 0]), rescale=np.array([1, 1])):
 
     return scaleG
 
+
+def build_barriers(barriers):
+
+    for b in barriers:
+        b.barrier = True
+        b.road = False
+        for n in b.nodes:
+            n.barrier = True
+            n.road = False
 
 ####################
 # Testing functions
