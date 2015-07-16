@@ -2,12 +2,10 @@ import numpy as np
 import shapefile
 import math
 from collections import defaultdict
-from matplotlib import pyplot as plt
 import networkx as nx
 import random
 import itertools
 import operator
-import matplotlib.colors as mcolors
 from scipy.cluster.hierarchy import linkage, dendrogram
 import json
 
@@ -577,7 +575,6 @@ def build_all_roads(myG, master=None, alpha=2, plot_intermediate=False,
         if plot_intermediate:
             myG.plot_roads(master, update=False)
             # plt.savefig("Int_Step"+str(plotnum)+".pdf", format='pdf')
-            # plotnum += 1
 
         remain = len(myG.interior_parcels)
         if quiet is False:

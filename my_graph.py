@@ -4,7 +4,6 @@ import itertools
 import math
 import warnings
 import json
-from matplotlib import pyplot as plt
 import my_graph_helpers as mgh
 from lazy_property import lazy_property
 
@@ -992,9 +991,9 @@ class MyGraph(object):
                       else 0.5 for n in self.G.nodes()]
 
         # plot current graph
-        nx.draw_networkx(self.G, pos=nlocs, with_labels=False,
-                         node_size=node_sizes, node_color=node_colors,
-                         edge_color=edge_colors, width=edge_width)
+        # nx.draw_networkx(self.G, pos=nlocs, with_labels=False,
+        #                  node_size=node_sizes, node_color=node_colors,
+        #                  edge_color=edge_colors, width=edge_width)
 
         # plot original roads
         if master:
@@ -1006,9 +1005,9 @@ class MyGraph(object):
             for e in eoffroad:
                 copy.G.remove_edge(e.nodes[0], e.nodes[1])
 
-            nx.draw_networkx(copy.G, pos=nlocs, with_labels=False,
-                             node_size=old_node_size, node_color='black',
-                             edge_color='black', width=old_road_width)
+            # nx.draw_networkx(copy.G, pos=nlocs, with_labels=False,
+            #                  node_size=old_node_size, node_color='black',
+            #                  edge_color='black', width=old_road_width)
 
     def plot_all_paths(self, all_paths, update=False):
         """ plots the shortest paths from all interior parcels to the road.
