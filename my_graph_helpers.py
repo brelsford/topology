@@ -492,10 +492,10 @@ def choose_path(myG, paths, alpha, strict_greedy=False):
 #            # flist = result[3]
 
 
-def build_all_roads(myG, master=None, alpha=2, plot_intermediate=False,
+def build_all_roads(myG, master=None, alpha=8, plot_intermediate=False,
                     wholepath=True, original_roads=None, plot_original=False,
                     bisect=False, plot_result=False, barriers=False,
-                    quiet=False, vquiet=False, strict_greedy=False,
+                    quiet=True, vquiet=True, strict_greedy=False,
                     outsidein=False):
 
     """builds roads using the probablistic greedy alg, until all
@@ -522,9 +522,10 @@ def build_all_roads(myG, master=None, alpha=2, plot_intermediate=False,
 
     target_mypath = None
     if vquiet is False:
-        pass
-        # print("Begin w {} Int Parcels".format(len(myG.interior_parcels)))
+        print("Begin w {} Int Parcels".format(len(myG.interior_parcels)))
 
+    # before the max depth (md) is calculated, just assume it's very large in
+    # in order ensure we find the equivalence classes at least once. 
     md = 100
 
     while myG.interior_parcels:
@@ -578,12 +579,10 @@ def build_all_roads(myG, master=None, alpha=2, plot_intermediate=False,
 
         remain = len(myG.interior_parcels)
         if quiet is False:
-            pass
-            #  print("\n{} interior parcels left".format(remain))
+            print("\n{} interior parcels left".format(remain))
         if vquiet is False:
             if remain > 300 or remain in [50, 100, 150, 200, 225, 250, 275]:
-                pass
-                # print "{} interior parcels left".format(remain)
+                print ("{} interior parcels left".format(remain))
 
     # update the properties of nodes & edges to reflect new geometry.
 
