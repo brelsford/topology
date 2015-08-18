@@ -90,3 +90,13 @@ FigureScripts/*
 .ipynb_checkpoints/*
 
 *.ipynb
+
+*.json
+
+*.csv
+
+Figures/cape_run_in_paper/capebisection_df
+
+Figures/epworth/epworthbisection_df
+
+*.zip
