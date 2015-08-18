@@ -12,14 +12,13 @@ import pandas as pd
 import json
 
 
-def build_path_byedges(myG,plist):
-    mypath = mgh.ptup_to_mypath(myG,plist)
-    for e in mypath:
-        if e.road is False:
-            myG.add_road_segment(e)
 
 
 def define_clusters(myG):
+    """Returns a list of connected components (edgewise consistent with main graph)
+    that represent the new trees built into the graph.
+       """
+    
     decimate = myG.copy()
     
     for e in decimate.myedges():
@@ -33,6 +32,7 @@ def define_clusters(myG):
     return clusters
 
 def cluster_to_cluster_path(graph,cluster0,cluster1):
+    """ Finds the shortest path between two clusters. """
     fakenode1 = mg.MyNode([-1,1])
     fakenode2 = mg.MyNode([1,-1])
 
@@ -56,6 +56,8 @@ def cluster_to_cluster_path(graph,cluster0,cluster1):
     return path[1:-1], length
 
 def make_row_clusters(graph,c0,c1):
+    """find all the important results about travel between two given clusters.
+    Returns pd data series   """
     path, length = cluster_to_cluster_path(graph,c0,c1)
     copy = graph.copy()
     new_roads = build_path(copy,path)
@@ -66,6 +68,7 @@ def make_row_clusters(graph,c0,c1):
     return y
 
 def exhaustive_by_clusters(graph):
+    """searches all pairs of clusters for path and change in Tbar. writes and returns results in dataframe"""
     clusters = define_clusters(graph)
     df = pd.DataFrame(columns=['cluster1','cluster2','path','pathlength','meantravel', 'tcmatrix'])
     counter = 0
@@ -82,6 +85,9 @@ def exhaustive_by_clusters(graph):
     return df
 
 def find_specialparcel_nodes(graph, network_matrix, geometric_matrix):
+    """Finds the special parcel based on the minimum ratio of
+    network travel distance to geometric travel distance  """
+    
     nrs = [sum(row) for row in network_matrix]
     grs = [sum(row) for row in geometric_matrix]
     ratio = [grs[i]/nrs[i] for i in range(0, len(nrs))]
@@ -97,6 +103,12 @@ def find_specialparcel_nodes(graph, network_matrix, geometric_matrix):
     return specialindex, specialparcel, startnodes, potential_road_nodes
     
 def find_pairs(graph, startnodes, potential_road_nodes):
+
+    """ finds all pairs of nodes, and the ratio of geometric to network
+     travel distance between them for a given set of starting
+     and ending nodes (based on a particular special parcel)
+     """
+    
     pairs = {}
     roads_only = graph.copy()
     etup_drop = roads_only.find_interior_edges()
@@ -115,6 +127,8 @@ def find_pairs(graph, startnodes, potential_road_nodes):
     return pairs
 
 def build_path(graph,pairs):
+    """builds a path based on the minimum ratio of geometric to travel distance.
+    """
     target = min(pairs, key=pairs.get)
     path = nx.shortest_path(graph.G,target[0],target[1])
     length = nx.shortest_path_length(graph.G,target[0],target[1], 'weight')

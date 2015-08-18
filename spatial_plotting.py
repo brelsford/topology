@@ -6,6 +6,9 @@ import networkx as nx
 import my_graph_helpers as mgh
 
 def plot(myG, **kwargs):
+    """ Basic spatial plotting for a graph."""
+
+    
     plt.axes().set_aspect(aspect=1)
     plt.axis('off')
     edge_kwargs = kwargs.copy()
@@ -23,6 +26,8 @@ def plot_roads(myG, master=None, update=False, title="", new_plot=True,
                new_road_color="blue",
                new_road_width=4, old_node_size=20, old_road_width=4,
                barriers=True, base_width=1):
+
+    """Plot parcel roads, interior parcels, and barriers."""
 
     nlocs = myG.location_dict()
 
@@ -106,7 +111,7 @@ def plot_all_paths(myG, all_paths, update=False):
 def plot_weak_duals(myG, stack=None, colors=None, width=None,
                     node_size=None):
     """Given a list of weak dual graphs, plots them all. Has default colors
-    node size, and line widths, but these can be added as lists."""
+    node size, and line widths, but these can be added as lists.  Can only plot 7 duals."""
 
     if stack is None:
         duals = myG.stacked_duals()
@@ -146,7 +151,8 @@ def plot_weak_duals(myG, stack=None, colors=None, width=None,
     plt.axis('off')
 
 
-def plot_parcel_labels(graph): 
+def plot_parcel_labels(graph):
+    """Makes a plot of the graph, with parcel indices at the centroid.  """ 
     plt.figure()
     for p in graph.inner_facelist:
         index = graph.inner_facelist.index(p)
