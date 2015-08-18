@@ -7,6 +7,7 @@ import json
 import my_graph_helpers as mgh
 from lazy_property import lazy_property
 
+from matplotlib import pyplot as plt
 #import plotly.plotly as py
 #from plotly.graph_objs import *
 
@@ -112,6 +113,7 @@ class MyEdge(object):
         self.interior = False
         self.road = False
         self.barrier = False
+        self.original_road = False
 
     @lazy_property
     def length(self):
@@ -148,7 +150,8 @@ class MyEdge(object):
                    "properties": {
                        "road": str(self.road).lower(),
                        "interior": str(self.interior).lower(),
-                       "barrier": str(self.barrier).lower()
+                       "barrier": str(self.barrier).lower(),
+                       "original_road": str(self.original_road).lower()
                    }
                }
 
@@ -513,6 +516,7 @@ class MyGraph(object):
             inner_facelist.append(iface)
             iface.down1_node = iface.centroid
 
+        inner_facelist.sort(lambda a,b: cmp(a.centroid,b.centroid))
         return inner_facelist
 
     def weak_dual(self):
@@ -942,132 +946,6 @@ class MyGraph(object):
 #      PLOTTING FUNCTIONS
 # ##################################
 
-    def plot(self, **kwargs):
-        plt.axes().set_aspect(aspect=1)
-        plt.axis('off')
-        edge_kwargs = kwargs.copy()
-        nlocs = self.location_dict()
-        edge_kwargs['label'] = "_nolegend"
-        edge_kwargs['pos'] = nlocs
-        nx.draw_networkx_edges(self.G, **edge_kwargs)
-        node_kwargs = kwargs.copy()
-        node_kwargs['label'] = self.name
-        node_kwargs['pos'] = nlocs
-        nodes = nx.draw_networkx_nodes(self.G, **node_kwargs)
-        nodes.set_edgecolor('None')
-
-    def plot_roads(self, master=None, update=False, parcel_labels=False,
-                   title="", new_plot=True, new_road_color="blue",
-                   new_road_width=4, old_node_size=25, old_road_width=6,
-                   barriers=True, base_width=1):
-
-        nlocs = self.location_dict()
-
-        if update:
-            self.define_roads()
-            self.define_interior_parcels()
-
-        if new_plot:
-            plt.figure()
-
-        edge_colors = ['blue' if e.road
-                       else 'green' if e.barrier
-                       else 'red' if e.interior
-                       else 'black' for e in self.myedges()]
-
-        edge_width = [new_road_width if e.road
-                      else 0.7*new_road_width if e.barrier
-                      else 0.7*new_road_width if e.interior
-                      else 1 for e in self.myedges()]
-
-        node_colors = ['blue' if n.road
-                       else 'green' if e.barrier
-                       else 'red' if n.interior
-                       else 'black' for n in self.G.nodes()]
-
-        node_sizes = [new_road_width**1.8 if n.road
-                      else new_road_width**1.4 if n.barrier
-                      else new_road_width**1.4 if n.interior
-                      else 0.5 for n in self.G.nodes()]
-
-        # plot current graph
-        # nx.draw_networkx(self.G, pos=nlocs, with_labels=False,
-        #                  node_size=node_sizes, node_color=node_colors,
-        #                  edge_color=edge_colors, width=edge_width)
-
-        # plot original roads
-        if master:
-            copy = master.copy()
-            noffroad = [n for n in copy.G.nodes() if not n.road]
-            for n in noffroad:
-                    copy.G.remove_node(n)
-            eoffroad = [e for e in copy.myedges() if not e.road]
-            for e in eoffroad:
-                copy.G.remove_edge(e.nodes[0], e.nodes[1])
-
-            # nx.draw_networkx(copy.G, pos=nlocs, with_labels=False,
-            #                  node_size=old_node_size, node_color='black',
-            #                  edge_color='black', width=old_road_width)
-
-    def plot_all_paths(self, all_paths, update=False):
-        """ plots the shortest paths from all interior parcels to the road.
-        Optional to update road geometery based on changes in network geometry.
-        """
-
-        plt.figure()
-        if len(all_paths) == 0:
-            self.plot_roads(update=update)
-        else:
-            Gs = []
-            for p in all_paths:
-                G = nx.subgraph(self.G, p)
-                Gs.append(G)
-            Gpaths = nx.compose_all(Gs, name="shortest paths")
-            myGpaths = MyGraph(Gpaths)
-            self.plot_roads(update=update)
-            myGpaths.plot(edge_color='purple', width=6, node_size=1)
-
-    def plot_weak_duals(self, stack=None, colors=None, width=None,
-                        node_size=None):
-        """Given a list of weak dual graphs, plots them all. Has default colors
-        node size, and line widths, but these can be added as lists."""
-
-        if stack is None:
-            duals = self.stacked_duals()
-        else:
-            duals = stack
-
-        if colors is None:
-            colors = ['grey', 'black', 'blue', 'purple', 'red', 'orange',
-                      'yellow']
-        else:
-            colors = colors
-
-        if width is None:
-            width = [0.5, 0.75, 1, 1.75, 2.25, 3, 3.5]
-        else:
-            width = width
-
-        if node_size is None:
-            node_size = [0.5, 6, 9, 12, 17, 25, 30]
-        else:
-            node_size = node_size
-
-        if len(duals) > len(colors):
-            warnings.warn("too many dual graphs to draw. simplify fig," +
-                          " or add more colors")
-
-        plt.figure()
-
-        for i in range(0, len(duals)):
-            for j in duals[i]:
-                j.plot(node_size=node_size[i], node_color=colors[i],
-                       edge_color=colors[i], width=width[i])
-                # print "color = {0}, node_size = {1}, width = {2}".format(
-                #       colors[i], node_size[i], width[i])
-
-        plt.axes().set_aspect(aspect=1)
-        plt.axis('off')
 
 
 if __name__ == "__main__":

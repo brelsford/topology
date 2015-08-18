@@ -6,11 +6,7 @@ import networkx as nx
 import random
 import itertools
 import operator
-from scipy.cluster.hierarchy import linkage, dendrogram
 import json
-
-# import plotly.plotly as ply
-# from plotly.graph_objs import *
 
 
 import my_graph as mg
@@ -465,6 +461,8 @@ def build_path(myG, start, finish):
 #############################################
 
 
+
+
 def choose_path(myG, paths, alpha, strict_greedy=False):
 
     """ chooses the path segment, choosing paths of shorter
@@ -625,7 +623,7 @@ def __road_connections_through_culdesac(myG, threshold=5):
     return etup_drop
 
 
-def shortest_path_p2p_matrix(myG, full=False, travelcost=False):
+def shortest_path_p2p_matrix_double(myG, full=False, travelcost=False):
     """option if full is false, removes all interior edges, so that travel
     occurs only along a road.  If full is true, keeps interior edges.  If
     travel cost is true, increases weight of non-road edges by a factor of ten.
@@ -677,9 +675,54 @@ def shortest_path_p2p_matrix(myG, full=False, travelcost=False):
         path_len_mat.append(path_len_vec)
 
         n = len(path_len_mat)
-        meantravel = (sum([sum(i) for i in path_len_mat])/(n*(n-1)))
+    meantravel = (sum([sum(i) for i in path_len_mat])/(n*(n-1)))
 
     return path_len_mat, meantravel
+
+
+def shortest_path_p2p_matrix(myG, full=False, travelcost=False):
+    """option if full is false, removes all interior edges, so that travel
+    occurs only along a road.  If full is true, keeps interior edges.  If
+    travel cost is true, increases weight of non-road edges by a factor of ten.
+    Base case is defaults of false and false."""
+
+    copy = myG.copy()
+
+    etup_drop = copy.find_interior_edges()
+    if full is False:
+        copy.G.remove_edges_from(etup_drop)
+        # print("dropping {} edges".format(len(etup_drop)))
+
+    __road_connections_through_culdesac(copy)
+
+    if travelcost is True:
+        for e in copy.myedges():
+            if e.road is False:
+                copy.G[e.nodes[0]][e.nodes[1]]['weight'] = e.length*10
+
+    n = len(copy.inner_facelist)
+    tcmat = np.zeros((n,n))
+
+    for (p0,p1) in itertools.combinations(copy.inner_facelist,2):
+        p0index = copy.inner_facelist.index(p0)
+        p1index = copy.inner_facelist.index(p1)
+        
+        __add_fake_edges(copy, p0)
+        __add_fake_edges(copy, p1)
+        try:
+            length = nx.shortest_path_length(copy.G, p0.centroid, p1.centroid,
+                                            "weight")
+        except:
+            length = np.nan
+        copy.G.remove_node(p0.centroid)
+        copy.G.remove_node(p1.centroid)
+
+        tcmat[p0index][p1index]=length
+        tcmat[p1index][p0index]=length
+        
+    meantravel = tcmat.mean()
+
+    return tcmat, meantravel
 
 
 def difference_roads_to_fences(myG, travelcost=False):
@@ -745,7 +788,11 @@ def graphFromMyFaces(flist, name=None):
     return myG
 
 
-def graphFromShapes(shapes, name, rezero=np.array([0, 0])):
+def graphFromShapes(shapes, name=None, rezero=np.array([0, 0])):
+
+    if name is None:
+        name = S0
+        
     nodedict = dict()
     plist = []
     for s in shapes:
@@ -773,8 +820,8 @@ def graphFromShapes(shapes, name, rezero=np.array([0, 0])):
 def is_roadnode(node, graph):
     """defines a node as a road node if any connected edges are road edges.
     returns true or false and updates the properties of the node. """
-    graph.G[node].keys()
-    node.road = False
+    #graph.G[node].keys()
+    #node.road = False
     for k in graph.G[node].keys():
         edge = graph.G[node][k]['myedge']
         if edge.road is True:
@@ -815,6 +862,7 @@ def graphFromJSON(jsonobj):
     """
 
     edgelist = []
+    nodedict = {}
     # read all the edges from json
     for feature in jsonobj['features']:
         # check that there are exactly 2 nodes
@@ -829,176 +877,65 @@ def graphFromJSON(jsonobj):
         isinterior = feature['properties']['interior']
         isroad = feature['properties']['road']
         isbarrier = feature['properties']['barrier']
+        isoriginal = feature['properties']['original_road']
 
         n0 = mg.MyNode(c0)
         n1 = mg.MyNode(c1)
+        nodes = []
 
-        edge = mg.MyEdge((n0, n1))
+        for myN in [n0,n1]:
+            if myN not in nodedict:
+                nodes.append(myN)
+                nodedict[myN] = myN
+            else:
+                nodes.append(nodedict[myN])
+
+        edge = mg.MyEdge(nodes)
         edge.road = json.loads(isroad)
         edge.interior = json.loads(isinterior)
         edge.barrier = json.loads(isbarrier)
+        edge.original_road = json.loads(isoriginal)
         edgelist.append(edge)
 
     # create a new graph from the edge list, and calculate
     # necessary graph properties from the road
     new = graphFromMyEdges(edgelist)
-    new.road_edges = [e for e in new.myedges() if e.road]
-    new.road_nodes = [n for n in new.G.nodes() if is_roadnode(n, new)]
-    new.interior_nodes = [n for n in new.G.nodes() if is_interiornode(n, new)]
-    new.barrier_nodes = [n for n in new.G.nodes() if is_barriernode(n, new)]
 
-    # defines all the faces in the graph
-    new.inner_facelist
-    # defines all the faces with no road nodes in the graph as interior parcels
-    new.define_interior_parcels()
+    define_graph_properties_from_edges(new)
 
     return new, edgelist
 
-####################
-# PLOTTING FUNCTIONS
-####################
+def define_graph_properties_from_edges(myG):
+    myG.road_edges = [e for e in myG.myedges() if e.road]
+    myG.road_nodes = [n for n in myG.G.nodes() if is_roadnode(n, myG)]
+    myG.interior_nodes = [n for n in myG.G.nodes() if is_interiornode(n, myG)]
+    myG.barrier_nodes = [n for n in myG.G.nodes() if is_barriernode(n, myG)]
+
+    # defines all the faces in the graph
+    myG.inner_facelist
+    # defines all the faces with no road nodes in the graph as interior parcels
+    myG.define_interior_parcels()
 
 
-# ==============================================================================
-# def plot_cluster_mat(clustering_data, plotting_data, title, dmax,
-#                      plot_dendro=True):
-#     """from http://nbviewer.ipython.org/github/OxanaSachenkova/
-#     hclust-python/blob/master/hclust.ipynb  First input matrix is used to
-#     define clustering order, second is the data that is plotted."""
-#
-#     fig = plt.figure(figsize=(8, 8))
-#     # x ywidth height
-#
-#     ax1 = fig.add_axes([0.05, 0.1, 0.2, 0.6])
-#     Y = linkage(clustering_data, method='single')
-#     Z1 = dendrogram(Y, orientation='right')  # adding/removing the axes
-#     ax1.set_xticks([])
-#     # ax1.set_yticks([])
-#
-# # Compute and plot second dendrogram.
-#     ax2 = fig.add_axes([0.3, 0.75, 0.6, 0.1])
-#     Z2 = dendrogram(Y)
-#     # ax2.set_xticks([])
-#     ax2.set_yticks([])
-#
-#     # set up custom color map
-#     c = mcolors.ColorConverter().to_rgb
-#     seq = [c('navy'), c('mediumblue'), .1, c('mediumblue'),
-#            c('darkcyan'), .2, c('darkcyan'), c('darkgreen'), .3,
-#            c('darkgreen'), c('lawngreen'), .4,c('lawngreen'),c('yellow'),.5,
-#            c('yellow'), c('orange'), .7, c('orange'), c('red')]
-#     custommap = make_colormap(seq)
-#
-#     # Compute and plot the heatmap
-#     axmatrix = fig.add_axes([0.3, 0.1, 0.6, 0.6])
-#
-#     if not plot_dendro:
-#         fig = plt.figure(figsize=(8, 8))
-#         axmatrix = fig.add_axes([0.05, 0.1, 0.85, 0.8])
-#
-#     idx1 = Z1['leaves']
-#     D = mat_reorder(plotting_data, idx1)
-#     im = axmatrix.matshow(D, aspect='auto', origin='lower', cmap=custommap,
-#                           vmin=0, vmax=dmax)
-#     axmatrix.set_xticks([])
-#     axmatrix.set_yticks([])
-#
-#     # Plot colorbar.
-#     h = 0.6
-#     if not plot_dendro:
-#         h = 0.8
-#     axcolor = fig.add_axes([0.91, 0.1, 0.02, h])
-#     plt.colorbar(im, cax=axcolor)
-#     ax2.set_title(title)
-#     if not plot_dendro:
-#         axmatrix.set_title(title)
-#
-#
-# def make_colormap(seq):
-#     """Return a LinearSegmentedColormap
-#     seq: a sequence of floats and RGB-tuples. The floats should be increasing
-#     and in the interval (0,1).
-#     """
-#     seq = [(None,) * 3, 0.0] + list(seq) + [1.0, (None,) * 3]
-#     cdict = {'red': [], 'green': [], 'blue': []}
-#     for i, item in enumerate(seq):
-#         if isinstance(item, float):
-#             r1, g1, b1 = seq[i - 1]
-#             r2, g2, b2 = seq[i + 1]
-#             cdict['red'].append([item, r1, r2])
-#             cdict['green'].append([item, g1, g2])
-#             cdict['blue'].append([item, b1, b2])
-#     return mcolors.LinearSegmentedColormap('CustomMap', cdict)
-# ==============================================================================
+def write_to_geoJSON(myG,suffix):
+    graphJSON = myG.myedges_geoJSON()
+    filename = myG.name+suffix+".json" 
+    f = open(filename, 'w')
+    f.write(graphJSON)
+    f.close()
 
-
-# ==============================================================================
-# def plotly_traces(myG):
-#     """myGraph to plotly trace   """
-#
-#     # add the edges as disconnected lines in a trace
-#     edge_trace = Scatter(x=[], y=[], mode='lines',
-#                          name='Parcel Boundaries',
-#                          line=Line(color='grey', width=0.5))
-#     road_trace = Scatter(x=[], y=[], mode='lines',
-#                          name='Road Boundaries',
-#                          line=Line(color='black', width=2))
-#     interior_trace = Scatter(x=[], y=[], mode='lines',
-#                              name='Interior Parcels',
-#                              line=Line(color='red', width=2.5))
-#     barrier_trace = Scatter(x=[], y=[], mode='lines',
-#                             name='Barriers',
-#                             line=Line(color='green', width=0.75))
-#
-#     for i in myG.connected_components():
-#         for edge in i.myedges():
-#             x0, y0 = edge.nodes[0].loc
-#             x1, y1 = edge.nodes[1].loc
-#             edge_trace['x'] += [x0, x1, None]
-#             edge_trace['y'] += [y0, y1, None]
-#             if edge.road:
-#                 road_trace['x'] += [x0, x1, None]
-#                 road_trace['y'] += [y0, y1, None]
-#             if edge.interior:
-#                 interior_trace['x'] += [x0, x1, None]
-#                 interior_trace['y'] += [y0, y1, None]
-#             if edge.barrier:
-#                 barrier_trace['x'] += [x0, x1, None]
-#                 barrier_trace['y'] += [y0, y1, None]
-#
-#     return [edge_trace, road_trace, interior_trace, barrier_trace]
-#
-#
-# def plotly_graph(traces, filename=None, title=None):
-#
-#     """ use ply.iplot(fig,filename) after this function in ipython notebok to
-#     show the resulting plotly figure inline, or url=ply.plot(fig,filename) to
-#     just get url of resulting fig and not plot inline. """
-#
-#     if filename is None:
-#         filename = "plotly_graph"
-#     fig = Figure(data=Data(traces),
-#                  layout=Layout(title=title, plot_bgcolor="rgb(217,217,217)",
-#                                showlegend=True,
-#                                xaxis=XAxis(showgrid=False, zeroline=False,
-#                                            showticklabels=False),
-#                                yaxis=YAxis(showgrid=False, zeroline=False,
-#                                            showticklabels=False)))
-#
-#     # ply.iplot(fig, filename=filename)
-#     # py.iplot(fig, filename=filename)
-#
-#     return fig, filename
-#
-# ==============================================================================
+def define_original_roads(myG):
+    for e in myG.myedges():
+        if e.road:
+            e.original_road=True
 
 ######################
 #  IMPORT & Running FUNCTIONS #
 #####################
 
 
-def import_and_setup(filename, threshold=1, component=None,
-                     rezero=np.array([0, 0]), byblock=True, name=""):
+def import_and_setup(filename, threshold=1, component=None, 
+                     rezero=True, byblock=True, name=None):
 
     """ threshold defines the minimum distance (in map units) between two nodes
     before they are combined into a single node during the clean up phase. This
@@ -1021,21 +958,17 @@ def import_and_setup(filename, threshold=1, component=None,
     # check that threshold is a float
 
     sf = shapefile.Reader(filename)
-    myG1 = graphFromShapes(sf.shapes(), name, rezero)
+    myG1 = graphFromShapes(sf.shapes(), name)
 
     print("shape file loaded")
 
     myG1 = myG1.clean_up_geometry(threshold, byblock)
 
     print("geometery cleaned up")
-
-    xmin = min([n.x for n in myG1.G.nodes()])
-    ymin = min([n.y for n in myG1.G.nodes()])
-
-    rezero_vector = np.array([xmin, ymin])
-
-    myG2 = rescale_mygraph(myG1, rezero=rezero_vector)
-    myG2.rezero_vector = rezero_vector
+    if rezero is True:
+        myG2 = rescale_mygraph(myG1)
+    else:
+        myG2 = myG1
 
     if component is None:
         return myG2
@@ -1043,13 +976,19 @@ def import_and_setup(filename, threshold=1, component=None,
         return myG2.connected_components()[component]
 
 
-def rescale_mygraph(myG, rezero=np.array([0, 0]), rescale=np.array([1, 1])):
+def rescale_mygraph(myG, rezero=None, rescale=np.array([1, 1])):
 
     """returns a new graph (with no interior properties defined), rescaled under
     a linear function newloc = (oldloc-rezero)*rescale  where all of those are
     (x,y) numpy arrays.  Default of rezero = (0,0) and rescale = (1,1) means
     the locations of nodes in the new and old graph are the same.
     """
+    if rezero is None:
+        xmin = min([n.x for n in myG.G.nodes()])
+        ymin = min([n.y for n in myG.G.nodes()])
+        rezero = np.array([xmin, ymin])
+
+    nodedict = {}
 
     scaleG = mg.MyGraph()
     for e in myG.myedges():
@@ -1057,10 +996,36 @@ def rescale_mygraph(myG, rezero=np.array([0, 0]), rescale=np.array([1, 1])):
         n1 = e.nodes[1]
         nn0 = mg.MyNode((n0.loc-rezero)*rescale)
         nn1 = mg.MyNode((n1.loc-rezero)*rescale)
-        scaleG.add_edge(mg.MyEdge((nn0, nn1)))
+
+        copy_node_properties(n0,nn0)
+        copy_node_properties(n1,nn1)
+
+        nodes = []
+        for myN in [nn0,nn1]:
+            if myN not in nodedict:
+                nodes.append(myN)
+                nodedict[myN] = myN
+            else:
+                nodes.append(nodedict[myN])
+        
+        newedge = mg.MyEdge(nodes)
+        newedge.road = e.road
+        newedge.interior = e.interior
+        newedge.barrier = e.barrier
+        newedge.original_road = e.original_road
+        
+        scaleG.add_edge(newedge)
+
+    scaleG.rezero_vector = rezero
+
+    define_graph_properties_from_edges(scaleG)
 
     return scaleG
 
+def copy_node_properties(old,new):
+    new.road = old.road
+    new.interior = old.interior
+    new.barrier = old.barrier
 
 def build_barriers(barriers):
 
@@ -1071,6 +1036,7 @@ def build_barriers(barriers):
             n.barrier = True
             n.road = False
 
+            
 ####################
 # Testing functions
 ###################
@@ -1099,7 +1065,8 @@ def test_nodes(n1, n2):
     is_num = len(set([id(n) for n in n1])
                  .intersection(set([id(n) for n in n2])))
     print("is eq? ", eq_num, "is is? ", is_num)
-
+    return eq_num - is_num
+   
 
 def test_interior_is_inner(myG):
     myG.inner_facelist
@@ -1110,7 +1077,6 @@ def test_interior_is_inner(myG):
     # print("interior in inner_facelist is {}".format(ans))
 
     return ans
-
 
 def testGraph():
     n = {}
