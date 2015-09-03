@@ -109,7 +109,7 @@ def plot_all_paths(myG, all_paths, update=False):
         myGpaths.plot(edge_color='purple', width=6, node_size=1)
 
 def plot_weak_duals(myG, stack=None, colors=None, width=None,
-                    node_size=None):
+                    node_size=None, new_plot=True):
     """Given a list of weak dual graphs, plots them all. Has default colors
     node size, and line widths, but these can be added as lists.  Can only plot 7 duals."""
 
@@ -137,8 +137,8 @@ def plot_weak_duals(myG, stack=None, colors=None, width=None,
     if len(duals) > len(colors):
         warnings.warn("too many dual graphs to draw. simplify fig," +
                       " or add more colors")
-
-    plt.figure()
+    if new_plot:
+        plt.figure()
 
     for i in range(0, len(duals)):
         for j in duals[i]:
