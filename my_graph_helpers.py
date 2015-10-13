@@ -7,9 +7,12 @@ import random
 import itertools
 import operator
 import json
+from heapq import nsmallest
 
 
 import my_graph as mg
+import geometric_optimization as go
+import spatial_plotting as sp
 
 
 """ This file includes a bunch of helper functions for my_graph.py.
@@ -178,6 +181,29 @@ def WeightedPick(d):
     return k
 
 
+def LogSumExp(lengths):
+    """Algorthim from here:  https://github.com/gonum/floats/blob/master/floats.go#L428 """
+    maxval= max(lengths)
+    if maxval is float('inf'):
+        return maxval
+    
+    lse = 0
+    for val in lengths:
+        lse += np.exp(val-maxval)
+        
+    return np.log(lse)+maxval
+
+def LogSumProbs(lengths,alpha):
+    """returns a probability of selection in an ordered list based on a list of different lengths.  
+    Probabilities are defined as 1/item**alpha (normalized). 
+    """
+    
+    logProb = [-alpha*np.log(i) for i in lengths]
+    normalization = LogSumExp(logProb)
+    logProbNorm = [i-normalization for i in logProb]
+    prob = [np.exp(i) for i in logProbNorm]
+    return prob
+
 def mat_reorder(matrix, order):
     """sorts a square matrix so both rows and columns are
     ordered by order. """
@@ -341,7 +367,7 @@ def shortest_path_p2p(myA, p1, p2):
     return path[1:-1], length
 
 
-def find_short_paths(myA, parcel, barriers=True, shortest_only=False):
+def find_short_paths(myA, parcel, barriers=True, strict_greedy=False):
     """ finds short paths from an interior parcel,
     returns them and stores in parcel.paths  """
 
@@ -360,16 +386,28 @@ def find_short_paths(myA, parcel, barriers=True, shortest_only=False):
     interior, road = shortest_path_setup(myA, parcel)
 
     shortest_path = nx.shortest_path(myA.G, road, interior, "weight")
-    if shortest_only is False:
-        shortest_path_segments = len(shortest_path)
-        shortest_path_distance = path_length(shortest_path[1:-1])
+    p = shorten_path(shortest_path[1:-1])
+    paths = {tuple(p): path_length(p)}
+    
+
+    shortest_path_segments = len(shortest_path)
+    shortest_path_distance = path_length(shortest_path[1:-1])
+    all_simple = [shorten_path(p[1:-1]) for p in nx.all_simple_paths(myA.G,
+                    road, interior, cutoff=shortest_path_segments + 2)]
+    if len(all_simple) < 9:
+        #print "original length of all_simple {}".format(len(all_simple))
         all_simple = [shorten_path(p[1:-1]) for p in nx.all_simple_paths(myA.G,
-                      road, interior, cutoff=shortest_path_segments + 2)]
-        paths = dict((tuple(p), path_length(p)) for p in all_simple
-                     if path_length(p) < shortest_path_distance*2)
-    if shortest_only is True:
-        p = shorten_path(shortest_path[1:-1])
-        paths = {tuple(p): path_length(p)}
+                      road, interior, cutoff=shortest_path_segments + 3)]
+        #print "finding more paths the first time"
+    if len(all_simple) < 9:
+        all_simple = [shorten_path(p[1:-1]) for p in nx.all_simple_paths(myA.G,
+                      road, interior, cutoff=shortest_path_segments + 4)]
+        #print "finding more paths the second time"
+
+    paths.update(dict((tuple(p), path_length(p)) for p in all_simple))
+
+    #print "{} paths found for parcel ({:.1f},{:.1f})".format(len(paths),parcel.centroid.x, parcel.centroid.y)
+    path10 = dict((k,v) for (k,v) in nsmallest(10,paths.iteritems(),operator.itemgetter(1)))    
 
     myA.G.remove_node(road)
     myA.G.remove_node(interior)
@@ -377,14 +415,14 @@ def find_short_paths(myA, parcel, barriers=True, shortest_only=False):
         for e in barrier_edges:
             myA.add_edge(e)
 
-    parcel.paths = paths
+    parcel.paths = path10
 
-    return paths
+    return path10
 
 
 def find_short_paths_all_parcels(myA, flist=None, full_path=None,
                                  barriers=True, quiet=False,
-                                 shortest_only=False):
+                                 strict_greedy=False):
     """ finds the short paths for all parcels, stored in parcel.paths
     default assumes we are calculating from the outside in.  If we submit an
     flist, find the parcels only for those faces, and (for now) recaluclate
@@ -423,7 +461,7 @@ def find_short_paths_all_parcels(myA, flist=None, full_path=None,
 
             if needs_update is True:
                 paths = find_short_paths(myA, parcel, barriers=barriers,
-                                         shortest_only=shortest_only)
+                                         strict_greedy=strict_greedy)
                 counter += 1
                 all_paths.update(paths)
             elif needs_update is False:
@@ -432,7 +470,7 @@ def find_short_paths_all_parcels(myA, flist=None, full_path=None,
         # if paths have not been defined for this parcel
         else:
             paths = find_short_paths(myA, parcel, barriers=barriers,
-                                     shortest_only=shortest_only)
+                                     strict_greedy=strict_greedy)
             counter += 1
             all_paths.update(paths)
     if quiet is False:
@@ -468,12 +506,20 @@ def choose_path(myG, paths, alpha, strict_greedy=False):
     """ chooses the path segment, choosing paths of shorter
     length more frequently  """
 
-    if strict_greedy is False:
-        inv_weight = dict((k, 1.0/(paths[k]**alpha)) for k in paths)
-        target_path = WeightedPick(inv_weight)
-    if strict_greedy is True:
-        target_path = min(paths, key=paths.get)
+    minpath = min(paths, key=paths.get)
 
+    if strict_greedy is False:
+        plist = paths.keys()
+        lengths = [paths[k] for k in plist]
+        probs = LogSumProbs(lengths,alpha)
+        probdict=dict(zip(plist,probs))
+        
+        #inv_weight = dict((k, 1.0/(paths[k]**alpha)) for k in paths)
+        target_path = WeightedPick(probdict)
+    if strict_greedy is True:
+        target_path = minpath
+
+    #print "target path len({0:.3f}) is min path (len {1:.3f}): {2}".format(paths[target_path], paths[minpath], target_path == minpath)
     mypath = ptup_to_mypath(myG, target_path)
 
     return target_path, mypath
@@ -506,6 +552,9 @@ def build_all_roads(myG, master=None, alpha=8, plot_intermediate=False,
     if plot_original:
         myG.plot_roads(original_roads, update=False,
                        parcel_labels=False, new_road_color="blue")
+
+    if plot_intermediate:
+        plotnum = 0
 
     shortest_only = False
     if strict_greedy is True:
@@ -555,7 +604,7 @@ def build_all_roads(myG, master=None, alpha=8, plot_intermediate=False,
 
         all_paths = find_short_paths_all_parcels(myG, flist, target_mypath,
                                                  barriers, quiet=quiet,
-                                                 shortest_only=shortest_only)
+                                                 strict_greedy=strict_greedy)
 
         # choose and build one
         target_ptup, target_mypath = choose_path(myG, all_paths, alpha,
@@ -572,8 +621,10 @@ def build_all_roads(myG, master=None, alpha=8, plot_intermediate=False,
 
         myG.define_interior_parcels()
         if plot_intermediate:
-            myG.plot_roads(master, update=False)
-            # plt.savefig("Int_Step"+str(plotnum)+".pdf", format='pdf')
+            filename = "Int_Step"+str(plotnum)
+            sp.plot_roads(myG, master, update=False, old_node_size=10, old_road_width = 4, savename=myG.name + filename)
+            write_to_geoJSON(myG,filename)
+            plotnum += 1
 
         remain = len(myG.interior_parcels)
         if quiet is False:
@@ -1021,6 +1072,19 @@ def rescale_mygraph(myG, rezero=None, rescale=np.array([1, 1])):
     define_graph_properties_from_edges(scaleG)
 
     return scaleG
+
+
+def loadFromJSON(filename, rescale=True):
+
+    f = open(filename, 'r')
+    jsnobj = json.load(f)
+    epworthmaster, edgelist = graphFromJSON(jsnobj)
+    
+    master = rescale_mygraph(epworthmaster)
+    master.name = filename
+    
+    return master
+
 
 def copy_node_properties(old,new):
     new.road = old.road

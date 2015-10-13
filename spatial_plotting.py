@@ -25,7 +25,7 @@ def plot(myG, **kwargs):
 def plot_roads(myG, master=None, update=False, title="", new_plot=True,
                new_road_color="blue",
                new_road_width=4, old_node_size=20, old_road_width=4,
-               barriers=True, base_width=1):
+               barriers=True, base_width=1,savename="None"):
 
     """Plot parcel roads, interior parcels, and barriers."""
 
@@ -55,7 +55,7 @@ def plot_roads(myG, master=None, update=False, title="", new_plot=True,
                   else 0.6 for e in myG.myedges()]
 
     node_colors = [nrc if n.road
-                   else 'green' if e.barrier
+                   else 'green' if n.barrier
                    else 'red' if n.interior
                    else 'grey' for n in myG.G.nodes()]
 
@@ -88,6 +88,9 @@ def plot_roads(myG, master=None, update=False, title="", new_plot=True,
         nx.draw_networkx(copy.G, pos=nlocs, with_labels=False,
                           node_size=old_node_size, node_color='black',
                           edge_color='black', width=old_road_width)
+
+    if savename is not None:
+        plt.savefig(savename+".pdf", format='pdf')
 
 
 def plot_all_paths(myG, all_paths, update=False):
